@@ -1,0 +1,6 @@
+{
+  "name": "Web GIS Map Editor",
+  "description": "Interactive web GIS tool for drawing, measuring, editing, and converting GeoJSON and GPX with UTM support.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
