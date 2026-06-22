@@ -72,6 +72,16 @@ export default function MapContainer({
   const measurementGroupRef = useRef<L.LayerGroup | null>(null);
   const drawingMeasureMarkersRef = useRef<L.Marker[]>([]);
 
+  // Focused geometry selection state & refs for segment measurement labels
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+  const selectedFeatureIdRef = useRef<string | null>(null);
+  const focusedMeasurementGroupRef = useRef<L.LayerGroup | null>(null);
+
+  // Sync ref with selected state to resolve stale closure issues in Leaflet events
+  useEffect(() => {
+    selectedFeatureIdRef.current = selectedFeatureId;
+  }, [selectedFeatureId]);
+
   // Ref to track current serialized GeoJSON on the map.
   // This avoids re-drawing loops during user interaction on the canvas.
   const mapGeoJsonStrRef = useRef<string>('');
@@ -113,6 +123,94 @@ export default function MapContainer({
       measurementGroupRef.current.clearLayers();
     }
     drawingMeasureMarkersRef.current = [];
+  };
+
+  const clearFocusedMeasurements = () => {
+    if (focusedMeasurementGroupRef.current) {
+      focusedMeasurementGroupRef.current.clearLayers();
+    }
+  };
+
+  const updateFocusedMeasurementsForLayer = (layer: any) => {
+    clearFocusedMeasurements();
+    if (!layer || !focusedMeasurementGroupRef.current) return;
+
+    try {
+      // Extract coordinates based on layer structure
+      const rawLatLngs = layer.getLatLngs ? layer.getLatLngs() : [];
+      let pts = getFlatLatLngs(rawLatLngs);
+      if (pts.length < 2) return;
+
+      const isRectangle = layer.pm?.shape === 'Rectangle' || layer._shape === 'Rectangle';
+      const isPolygon = layer instanceof L.Polygon;
+      const isPolyline = layer instanceof L.Polyline && !isPolygon;
+
+      let segments: Array<[L.LatLng, L.LatLng]> = [];
+
+      if (isRectangle) {
+        if (pts.length === 4) {
+          segments.push([pts[0], pts[1]]);
+          segments.push([pts[1], pts[2]]);
+          segments.push([pts[2], pts[3]]);
+          segments.push([pts[3], pts[0]]);
+        }
+      } else if (isPolygon) {
+        // Closed loop segments
+        for (let i = 0; i < pts.length - 1; i++) {
+          segments.push([pts[i], pts[i + 1]]);
+        }
+        if (pts.length >= 3) {
+          segments.push([pts[pts.length - 1], pts[0]]);
+        }
+      } else if (isPolyline) {
+        // Open polyline segments
+        for (let i = 0; i < pts.length - 1; i++) {
+          segments.push([pts[i], pts[i + 1]]);
+        }
+      }
+
+      // Exact 2 decimal places formatter as shown in user's image screen capture
+      const formatSegmentDist = (meters: number): string => {
+        if (meters < 1000) {
+          return `${meters.toFixed(2)} m`;
+        }
+        return `${(meters / 1000).toFixed(2)} km`;
+      };
+
+      segments.forEach(([pA, pB]) => {
+        const dist = pA.distanceTo(pB);
+        if (dist < 0.2) return;
+
+        const formatted = formatSegmentDist(dist);
+        const midLat = (pA.lat + pB.lat) / 2;
+        const midLng = (pA.lng + pB.lng) / 2;
+        const pos = L.latLng(midLat, midLng);
+
+        // Beautiful floating white pill badge with a thin border and elegant drop shadow
+        const labelIcon = L.divIcon({
+          html: `
+            <div class="flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
+              <div class="px-2.5 py-1 bg-white border border-zinc-200 text-zinc-800 text-[11px] font-extrabold rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.12)] whitespace-nowrap select-none pointer-events-none transition-all z-[1200] leading-none">
+                ${formatted}
+              </div>
+            </div>
+          `,
+          className: 'focused-distance-tag',
+          iconSize: [0, 0]
+        });
+
+        const labelMarker = L.marker(pos, {
+          icon: labelIcon,
+          interactive: false
+        });
+
+        if (focusedMeasurementGroupRef.current) {
+          labelMarker.addTo(focusedMeasurementGroupRef.current);
+        }
+      });
+    } catch (err) {
+      console.error('Error drawing focused measurements:', err);
+    }
   };
 
   const updateDrawingMeasurements = (mouseLatLng?: L.LatLng) => {
@@ -256,6 +354,10 @@ export default function MapContainer({
     // Add designated Layer Group for active drawing measurements
     const measurementGroup = L.layerGroup().addTo(map);
     measurementGroupRef.current = measurementGroup;
+
+    // Add designated Layer Group for editing/focused segment length measurements
+    const focusedGroup = L.layerGroup().addTo(map);
+    focusedMeasurementGroupRef.current = focusedGroup;
 
     // Initialize Tile Layer
     const defaultLayer = BASE_LAYERS.find(l => l.id === activeLayerId) || BASE_LAYERS[0];
@@ -439,6 +541,12 @@ export default function MapContainer({
       setHoverCoords(null);
     });
 
+    map.on('click', () => {
+      if (!isDrawingRef.current) {
+        setSelectedFeatureId(null);
+      }
+    });
+
     // Clean up
     return () => {
       map.remove();
@@ -546,6 +654,24 @@ export default function MapContainer({
             layer.bindPopup(tooltipHtml);
           }
 
+          // Layer click focus listener
+          layer.on('click', (e: L.LeafletMouseEvent) => {
+            // Prevent map-wide click de-selection from firing instantly
+            L.DomEvent.stopPropagation(e);
+            setSelectedFeatureId(layer._pm_temp_id);
+          });
+
+          // Interactive updates on shape changes (marker drag, drag, vertex adjustments)
+          const handleLayerGeomChange = () => {
+            if (layer._pm_temp_id === selectedFeatureIdRef.current) {
+              updateFocusedMeasurementsForLayer(layer);
+            }
+          };
+          layer.on('pm:edit', handleLayerGeomChange);
+          layer.on('pm:drag', handleLayerGeomChange);
+          layer.on('pm:markerdrag', handleLayerGeomChange);
+          layer.on('pm:dragend', handleLayerGeomChange);
+
           // Attach Geoman listeners back to manually imported layers
           layer.on('pm:edit', () => {
             const currentFeatures: any[] = [];
@@ -634,6 +760,7 @@ export default function MapContainer({
     });
 
     if (targetLayer) {
+      setSelectedFeatureId(zoomToTrigger.id);
       if (targetLayer instanceof L.Marker) {
         map.setView(targetLayer.getLatLng(), 15, { animate: true });
         targetLayer.openPopup();
@@ -643,6 +770,40 @@ export default function MapContainer({
       }
     }
   }, [zoomToTrigger]);
+
+  // React to selection changes of a geometry feature to draw segment lengths
+  useEffect(() => {
+    const group = geojsonGroupRef.current;
+    if (!group) return;
+
+    if (!selectedFeatureId) {
+      clearFocusedMeasurements();
+      return;
+    }
+
+    // Find the correct layer
+    let foundLayer: any = null;
+    const layers = group.getLayers();
+    
+    layers.forEach((layer: any) => {
+      // Standard Leaflet GeoJSON layer acts as a layer tree container
+      if (layer.getLayers) {
+        layer.getLayers().forEach((sub: any) => {
+          if (sub._pm_temp_id === selectedFeatureId) {
+            foundLayer = sub;
+          }
+        });
+      } else if (layer._pm_temp_id === selectedFeatureId) {
+        foundLayer = layer;
+      }
+    });
+
+    if (foundLayer) {
+      updateFocusedMeasurementsForLayer(foundLayer);
+    } else {
+      clearFocusedMeasurements();
+    }
+  }, [selectedFeatureId, geoJsonData]);
 
   // Handle Base Map change
   const handleBaseLayerSelect = (layerId: string) => {
