@@ -1,18 +1,26 @@
+"use client";
+
 import React, { useState } from 'react';
-import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
-import MapContainer from './components/MapContainer';
-import { CoordinateMode, GisFeatureProperties } from './types';
+import dynamic from 'next/dynamic';
+import Navbar from '@/components/Navbar';
+import Sidebar from '@/components/Sidebar';
+import { CoordinateMode, GisFeatureProperties } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
-import { INDONESIA_SAMPLES } from './data/samples';
-import { geojsonToGPX } from './utils/gpx';
+import { INDONESIA_SAMPLES } from '@/lib/data/samples';
+import { geojsonToGPX } from '@/lib/gpx';
+
+// Dynamic import of MapContainer with SSR disabled to prevent Leaflet "window is not defined" error
+const MapContainer = dynamic(() => import('@/components/MapContainer'), { 
+  ssr: false,
+  loading: () => <div className="flex-1 bg-zinc-100 animate-pulse flex items-center justify-center text-zinc-400">Loading Map...</div>
+});
 
 const EMPTY_COLLECTION: FeatureCollection = {
   type: 'FeatureCollection',
   features: []
 };
 
-export default function App() {
+export default function Page() {
   const [coordinateMode, setCoordinateMode] = useState<CoordinateMode>('UTM');
   const [geoJsonData, setGeoJsonData] = useState<FeatureCollection>(INDONESIA_SAMPLES[0].data); // Load monas by default!
   const [hoverCoords, setHoverCoords] = useState<{ lat: number; lng: number } | null>(null);

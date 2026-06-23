@@ -1,10 +1,12 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
-import { CoordinateMode } from '../types';
+import { CoordinateMode } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
-import { latLngToUtm } from '../utils/utm';
-import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '../utils/gisCalc';
+import { latLngToUtm } from '@/lib/utm';
+import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '@/lib/gisCalc';
 import { Layers, Crosshair, MapPin, Maximize2 } from 'lucide-react';
 
 interface MapContainerProps {
