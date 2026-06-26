@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { CoordinateMode, GisFeatureProperties } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
-import { INDONESIA_SAMPLES } from '@/lib/data/samples';
 import { geojsonToGPX } from '@/lib/gpx';
 
 // Dynamic import of MapContainer with SSR disabled to prevent Leaflet "window is not defined" error
@@ -22,7 +21,8 @@ const EMPTY_COLLECTION: FeatureCollection = {
 
 export default function Page() {
   const [coordinateMode, setCoordinateMode] = useState<CoordinateMode>('UTM');
-  const [geoJsonData, setGeoJsonData] = useState<FeatureCollection>(INDONESIA_SAMPLES[0].data); // Load monas by default!
+  const [geoJsonData, setGeoJsonData] = useState<FeatureCollection>(EMPTY_COLLECTION);
+
   const [hoverCoords, setHoverCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [zoomToTrigger, setZoomToTrigger] = useState<{ id: string; time: number } | null>(null);
 
@@ -58,13 +58,6 @@ export default function Page() {
   // Apply imported/uploaded GeoJSON dataset
   const handleImportGeoJSON = (data: FeatureCollection) => {
     setGeoJsonData(data);
-  };
-
-  // Load a dynamic Landmark pre-selection
-  const handleLoadSample = (index: number) => {
-    if (index >= 0 && index < INDONESIA_SAMPLES.length) {
-      setGeoJsonData(INDONESIA_SAMPLES[index].data);
-    }
   };
 
   // Clear Map Canvas
@@ -144,7 +137,6 @@ export default function Page() {
         onImportGeoJSON={handleImportGeoJSON}
         onExportGeoJSON={handleExportGeoJSON}
         onExportGPX={handleExportGPX}
-        onLoadSample={handleLoadSample}
         onClearMap={handleClearMap}
         hasData={hasData}
       />
