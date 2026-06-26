@@ -1,20 +1,21 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Next.js template
 
-# Run and deploy your AI Studio app
+This is a Next.js template with shadcn/ui.
 
-This contains everything you need to run your app locally.
+## Adding components
 
-View your app in AI Studio: https://ai.studio/apps/5638b912-3fca-43d5-9edc-198fd1983c12
+To add components to your app, run the following command:
 
-## Run Locally
+```bash
+npx shadcn@latest add button
+```
 
-**Prerequisites:**  Node.js
+This will place the ui components in the `components` directory.
 
+## Using components
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+To use the components in your app, import them as follows:
+
+```tsx
+import { Button } from "@/components/ui/button";
+```
