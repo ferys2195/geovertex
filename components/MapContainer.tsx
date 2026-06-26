@@ -188,11 +188,20 @@ export default function MapContainer({
         const midLng = (pA.lng + pB.lng) / 2;
         const pos = L.latLng(midLat, midLng);
 
-        // Beautiful floating white pill badge with a thin border and elegant drop shadow
+        let angle = 0;
+        const map = mapInstanceRef.current;
+        if (map) {
+          const ptA = map.project(pA);
+          const ptB = map.project(pB);
+          angle = Math.atan2(ptB.y - ptA.y, ptB.x - ptA.x) * (180 / Math.PI);
+          // keep text upright
+          if (angle > 90 || angle < -90) angle += 180;
+        }
+
         const labelIcon = L.divIcon({
           html: `
-            <div class="flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
-              <div class="px-2.5 py-1 bg-white border border-zinc-200 text-zinc-800 text-[11px] font-extrabold rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.12)] whitespace-nowrap select-none pointer-events-none transition-all z-[1200] leading-none">
+            <div class="flex items-center justify-center pointer-events-none" style="transform: translate(-50%, -50%) rotate(${angle}deg);">
+              <div class="text-[11px] font-extrabold whitespace-nowrap z-[1200] leading-none" style="color: #000000; text-shadow: 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff;">
                 ${formatted}
               </div>
             </div>
@@ -305,11 +314,23 @@ export default function MapContainer({
         const midLng = (pA.lng + pB.lng) / 2;
         const pos = L.latLng(midLat, midLng);
 
+        let angle = 0;
+        const map = mapInstanceRef.current;
+        if (map) {
+          const ptA = map.project(pA);
+          const ptB = map.project(pB);
+          angle = Math.atan2(ptB.y - ptA.y, ptB.x - ptA.x) * (180 / Math.PI);
+          // keep text upright
+          if (angle > 90 || angle < -90) angle += 180;
+        }
+
         // Render as a divIcon label marker
         const labelIcon = L.divIcon({
           html: `
-            <div class="flex items-center justify-center -translate-x-1/2 -translate-y-1/2 bg-zinc-900/90 hover:bg-zinc-950 border border-white text-white text-[9px] font-extrabold rounded px-1.5 py-0.5 shadow-md whitespace-nowrap select-none pointer-events-none transition-all z-[1100]">
-              ${formatted}
+            <div class="flex items-center justify-center pointer-events-none" style="transform: translate(-50%, -50%) rotate(${angle}deg);">
+              <div class="text-[10px] font-extrabold whitespace-nowrap z-[1100] leading-none" style="color: #000000; text-shadow: 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff;">
+                ${formatted}
+              </div>
             </div>
           `,
           className: 'measurement-distance-tag',

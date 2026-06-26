@@ -10,7 +10,6 @@ import {
   Database
 } from 'lucide-react';
 import { CoordinateMode } from '@/lib/types';
-import { INDONESIA_SAMPLES } from '@/lib/data/samples';
 import { FeatureCollection } from 'geojson';
 import { gpxToGeoJSON } from '@/lib/gpx';
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,6 @@ interface NavbarProps {
   onImportGeoJSON: (data: FeatureCollection) => void;
   onExportGeoJSON: () => void;
   onExportGPX: () => void;
-  onLoadSample: (sampleIndex: number) => void;
   onClearMap: () => void;
   hasData: boolean;
 }
@@ -37,7 +35,6 @@ export default function Navbar({
   onImportGeoJSON,
   onExportGeoJSON,
   onExportGPX,
-  onLoadSample,
   onClearMap,
   hasData
 }: NavbarProps) {
@@ -92,36 +89,15 @@ export default function Navbar({
         </div>
         <div>
           <h1 className="font-bold text-base tracking-tight flex items-center gap-2">
-            INDO-GIS <span className="text-[10px] bg-muted text-muted-foreground font-bold px-1.5 py-0.5 rounded border">V1.5</span>
+            Geovertex <span className="text-[10px] bg-muted text-muted-foreground font-bold px-1.5 py-0.5 rounded border">V1.5</span>
           </h1>
-          <p className="text-[11px] text-muted-foreground font-medium">geojson.io clone &amp; UTM coordinate toolkit</p>
+          <p className="text-[11px] text-muted-foreground font-medium">Sistem Grid UTM (WGS 84)</p>
         </div>
       </div>
 
       {/* Control Actions & Switches */}
       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
         
-        {/* Sample Loader */}
-        <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-1.5 border max-w-xs transition-all hover:bg-muted/80">
-          <Database className="w-4 h-4 text-muted-foreground" />
-          <select 
-            onChange={(e) => {
-              if (e.target.value !== "") {
-                onLoadSample(Number(e.target.value));
-              }
-            }} 
-            className="bg-transparent text-xs text-foreground outline-none pr-1 cursor-pointer font-medium"
-            defaultValue=""
-          >
-            <option value="" disabled className="text-muted-foreground">Pilih Data Sampel...</option>
-            {INDONESIA_SAMPLES.map((sample, idx) => (
-              <option key={idx} value={idx} className="bg-background">
-                {sample.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Input Format Switcher: UTM vs LatLng */}
         <div className="flex items-center bg-muted p-1 rounded-md border">
           <Button

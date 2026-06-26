@@ -738,9 +738,10 @@ export default function Sidebar({
       </Tabs>
       
       {/* Bottom info footer */}
-      <div className="p-3 bg-muted/40 text-[10px] text-muted-foreground border-t border-border flex items-center justify-between font-semibold">
-        <span>Sistem Grid UTM (Universal Grid WGS-84)</span>
-        <span>Client Mode Offline</span>
+      <div className="p-3.5 bg-muted/40 text-muted-foreground border-t border-border flex items-center justify-center font-semibold">
+        <div className="text-[11px] opacity-90">
+          &copy; {new Date().getFullYear()} Geovertex. Crafted by <a href="https://feryirawan.com" target="_blank" rel="noopener noreferrer" className="hover:underline text-foreground font-bold transition-colors">Fery Irawan</a>.
+        </div>
       </div>
     </aside>
   );
