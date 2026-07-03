@@ -7,7 +7,13 @@ import { CoordinateMode } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
 import { latLngToUtm } from '@/lib/utm';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '@/lib/gisCalc';
-import { Layers, Crosshair, MapPin, Maximize2 } from 'lucide-react';
+import { Layers, Crosshair, MapPin, Maximize2, Copy } from 'lucide-react';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface MapContainerProps {
   geoJsonData: FeatureCollection;
@@ -66,6 +72,7 @@ export default function MapContainer({
   const activeTileLayerRef = useRef<L.TileLayer | null>(null);
   const [activeLayerId, setActiveLayerId] = useState<string>('carto-light');
   const [showLayerMenu, setShowLayerMenu] = useState<boolean>(false);
+  const [rightClickCoords, setRightClickCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Drawing mode measurement and tracking refs
   const isDrawingRef = useRef<boolean>(false);
@@ -565,6 +572,10 @@ export default function MapContainer({
       setHoverCoords(null);
     });
 
+    map.on('contextmenu', (e: L.LeafletMouseEvent) => {
+      setRightClickCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+    });
+
     map.on('click', () => {
       if (!isDrawingRef.current) {
         setSelectedFeatureId(null);
@@ -849,6 +860,20 @@ export default function MapContainer({
     }
   }, [selectedFeatureId, geoJsonData]);
 
+  const handleCopyCoordinates = () => {
+    const coordsToCopy = rightClickCoords || hoverCoords;
+    if (!coordsToCopy) return;
+    
+    let textToCopy = '';
+    if (coordinateMode === 'UTM') {
+      textToCopy = latLngToUtm(coordsToCopy.lat, coordsToCopy.lng).formatted;
+    } else {
+      textToCopy = `${coordsToCopy.lat.toFixed(6)}, ${coordsToCopy.lng.toFixed(6)}`;
+    }
+    
+    navigator.clipboard.writeText(textToCopy);
+  };
+
   // Handle Base Map change
   const handleBaseLayerSelect = (layerId: string) => {
     const map = mapInstanceRef.current;
@@ -873,13 +898,14 @@ export default function MapContainer({
   };
 
   return (
-    <div className="flex-1 relative h-full">
-      {/* MAP MOUNT ELEMENT CONTAINER */}
-      <div 
-        ref={mapContainerRef} 
-        id="map" 
-        className="w-full h-full text-zinc-900 border-none select-none z-[1]"
-      />
+    <ContextMenu>
+      <ContextMenuTrigger className="flex-1 relative h-full block">
+        {/* MAP MOUNT ELEMENT CONTAINER */}
+          <div 
+            ref={mapContainerRef} 
+            id="map" 
+            className="w-full h-full text-zinc-900 border-none select-none z-[1]"
+          />
 
       {/* CUSTOM FLOATING BASELAYERS SWITCHER CARD BUTTON */}
       <div className="absolute top-4 right-4 z-[1000]">
@@ -949,6 +975,14 @@ export default function MapContainer({
           <span className="text-zinc-400 italic">Pindahkan kursor di atas peta</span>
         )}
       </div>
-    </div>
+      </ContextMenuTrigger>
+
+      <ContextMenuContent className="w-48 z-[9999]">
+        <ContextMenuItem onClick={handleCopyCoordinates} className="cursor-pointer flex items-center gap-2">
+          <Copy className="w-4 h-4 text-zinc-500" />
+          <span className="font-medium">Salin Koordinat</span>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
