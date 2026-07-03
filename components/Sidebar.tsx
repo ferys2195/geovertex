@@ -14,13 +14,15 @@ import {
   PlusCircle, 
   Calculator,
   Compass,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FeatureCollection, Feature } from 'geojson';
 import { CoordinateMode, GisFeatureProperties } from '@/lib/types';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '@/lib/gisCalc';
 import { latLngToUtm, utmToLatLng } from '@/lib/utm';
+import { TEMPLATES } from '@/lib/templates';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,6 +56,7 @@ export default function Sidebar({
   const [editName, setEditName] = useState<string>('');
   const [editDesc, setEditDesc] = useState<string>('');
   const [editColor, setEditColor] = useState<string>('#3b82f6');
+  const [editCustomProps, setEditCustomProps] = useState<Record<string, string>>({});
 
   // Manual Coordinates State
   // Latitude / Longitude
@@ -114,6 +117,15 @@ export default function Sidebar({
     setEditName(props.name || 'Fitur Tanpa Nama');
     setEditDesc(props.description || '');
     setEditColor(props.color || '#3b82f6');
+    
+    const standardKeys = ['id', 'name', 'description', 'color', 'gpxType'];
+    const customProps: Record<string, string> = {};
+    Object.keys(props).forEach(key => {
+      if (!standardKeys.includes(key)) {
+        customProps[key] = String(props[key] ?? '');
+      }
+    });
+    setEditCustomProps(customProps);
   };
 
   const handleSaveFeature = (id: string) => {
@@ -121,9 +133,47 @@ export default function Sidebar({
       id,
       name: editName,
       description: editDesc,
-      color: editColor
+      color: editColor,
+      ...editCustomProps
     });
     setEditingId(null);
+  };
+
+  const handleCustomPropChange = (key: string, value: string) => {
+    setEditCustomProps(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleAddCustomProp = () => {
+    const newKey = `prop_${Object.keys(editCustomProps).length + 1}`;
+    setEditCustomProps(prev => ({ ...prev, [newKey]: '' }));
+  };
+
+  const handleRemoveCustomProp = (key: string) => {
+    setEditCustomProps(prev => {
+      const copy = { ...prev };
+      delete copy[key];
+      return copy;
+    });
+  };
+
+  const handleRenameCustomPropKey = (oldKey: string, newKey: string) => {
+    if (oldKey === newKey || !newKey.trim()) return;
+    setEditCustomProps(prev => {
+      const copy = { ...prev };
+      const value = copy[oldKey];
+      delete copy[oldKey];
+      copy[newKey] = value;
+      return copy;
+    });
+  };
+
+  const handleApplyTemplate = (templateId: keyof typeof TEMPLATES) => {
+    const template = TEMPLATES[templateId];
+    if (!template) return;
+    setEditCustomProps(prev => ({
+      ...prev,
+      ...template.data
+    }));
   };
 
   // Convert LatLng fields to UTM fields
@@ -355,6 +405,46 @@ export default function Sidebar({
                                     ))}
                                   </div>
                                 </div>
+
+                                {/* Custom Properties Section */}
+                                <div className="pt-2 border-t border-border mt-2 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Custom Properties</span>
+                                    <div className="flex gap-1">
+                                      <Button variant="outline" size="sm" className="h-6 text-[9px] px-2" onClick={() => handleApplyTemplate('surat_tanah')}>
+                                        + Surat Tanah
+                                      </Button>
+                                      <Button variant="outline" size="sm" className="h-6 w-6 p-0" onClick={handleAddCustomProp}>
+                                        <Plus className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                    {Object.entries(editCustomProps).map(([key, val], i) => (
+                                      <div key={i} className="flex items-center gap-1.5">
+                                        <Input
+                                          defaultValue={key}
+                                          onBlur={(e) => handleRenameCustomPropKey(key, e.target.value)}
+                                          className="h-6 text-[10px] w-1/3 bg-muted/50"
+                                          placeholder="Key"
+                                        />
+                                        <Input
+                                          value={val}
+                                          onChange={(e) => handleCustomPropChange(key, e.target.value)}
+                                          className="h-6 text-[10px] flex-1 bg-background"
+                                          placeholder="Value"
+                                        />
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive shrink-0" onClick={() => handleRemoveCustomProp(key)}>
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                    {Object.keys(editCustomProps).length === 0 && (
+                                      <p className="text-[10px] text-muted-foreground italic text-center py-1">Belum ada custom properties.</p>
+                                    )}
+                                  </div>
+                                </div>
+
                                 <div className="flex gap-2 justify-end pt-1">
                                   <Button
                                     variant="outline"

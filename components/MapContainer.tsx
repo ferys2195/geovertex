@@ -7,7 +7,13 @@ import { CoordinateMode } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
 import { latLngToUtm } from '@/lib/utm';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '@/lib/gisCalc';
-import { Layers, Crosshair, MapPin, Maximize2 } from 'lucide-react';
+import { Layers, Crosshair, MapPin, Maximize2, Copy } from 'lucide-react';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface MapContainerProps {
   geoJsonData: FeatureCollection;
@@ -66,6 +72,7 @@ export default function MapContainer({
   const activeTileLayerRef = useRef<L.TileLayer | null>(null);
   const [activeLayerId, setActiveLayerId] = useState<string>('carto-light');
   const [showLayerMenu, setShowLayerMenu] = useState<boolean>(false);
+  const [rightClickCoords, setRightClickCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Drawing mode measurement and tracking refs
   const isDrawingRef = useRef<boolean>(false);
@@ -356,11 +363,11 @@ export default function MapContainer({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Create the Leaflet Map
     const map = L.map(mapContainerRef.current, {
       center: [-6.1754, 106.8272], // Central Monas, Jakarta
       zoom: 13,
       zoomControl: false, // Customize position of controls
+      maxZoom: 24,
     });
 
     mapInstanceRef.current = map;
@@ -386,7 +393,8 @@ export default function MapContainer({
     const defaultLayer = BASE_LAYERS.find(l => l.id === activeLayerId) || BASE_LAYERS[0];
     const tileLayer = L.tileLayer(defaultLayer.url, {
       attribution: defaultLayer.attribution,
-      maxZoom: 19
+      maxZoom: 24,
+      maxNativeZoom: 19
     }).addTo(map);
     activeTileLayerRef.current = tileLayer;
 
@@ -564,6 +572,10 @@ export default function MapContainer({
       setHoverCoords(null);
     });
 
+    map.on('contextmenu', (e: L.LeafletMouseEvent) => {
+      setRightClickCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+    });
+
     map.on('click', () => {
       if (!isDrawingRef.current) {
         setSelectedFeatureId(null);
@@ -630,52 +642,69 @@ export default function MapContainer({
           // Sync internal Geoman ID
           layer._pm_temp_id = feature.properties?.id || Math.random().toString(36).substring(2, 11);
 
-          // Calculate measurement tooltips
-          let tooltipHtml = '';
-          const geomType = feature.geometry?.type;
-          const name = feature.properties?.name || 'Titik Tanpa Nama';
-          const desc = feature.properties?.description || '';
+          // Calculate measurement tooltips and bind them
+          const updatePopupContent = () => {
+            let tooltipHtml = '';
+            let currentGeo: any = null;
+            if (typeof layer.toGeoJSON === 'function') {
+              currentGeo = layer.toGeoJSON();
+            } else {
+              currentGeo = feature;
+            }
 
-          if (geomType === 'Polygon') {
-            const coords = feature.geometry.coordinates[0];
-            const area = calculatePolygonArea(coords);
-            const perimeter = calculatePolygonPerimeter(coords);
-            tooltipHtml = `
-              <div class="p-1.5 text-xs font-sans">
-                <p class="font-bold text-zinc-800">${name}</p>
-                ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-                <hr class="my-1 border-zinc-200" />
-                <p class="text-[11px] text-emerald-600 font-bold">Luas: ${formatArea(area)}</p>
-                <p class="text-[10px] text-zinc-600">Keliling: ${formatDistance(perimeter)}</p>
-              </div>
-            `;
-          } else if (geomType === 'LineString') {
-            const coords = feature.geometry.coordinates;
-            const length = calculateLineLength(coords);
-            tooltipHtml = `
-              <div class="p-1.5 text-xs font-sans">
-                <p class="font-bold text-zinc-800">${name}</p>
-                ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-                <hr class="my-1 border-zinc-200" />
-                <p class="text-[11px] text-blue-600 font-bold font-mono">Panjang: ${formatDistance(length)}</p>
-              </div>
-            `;
-          } else if (geomType === 'Point') {
-            const coords = feature.geometry.coordinates;
-            tooltipHtml = `
-              <div class="p-1.5 text-xs font-sans">
-                <p class="font-bold text-zinc-800">${name}</p>
-                ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-                <hr class="my-1 border-zinc-200" />
-                <p class="text-[10px] text-zinc-650 font-mono">Lat: ${coords[1].toFixed(5)}</p>
-                <p class="text-[10px] text-zinc-650 font-mono">Lng: ${coords[0].toFixed(5)}</p>
-              </div>
-            `;
-          }
+            const geomType = currentGeo.geometry?.type;
+            const name = feature.properties?.name || 'Titik Tanpa Nama';
+            const desc = feature.properties?.description || '';
 
-          if (tooltipHtml) {
-            layer.bindPopup(tooltipHtml);
-          }
+            if (geomType === 'Polygon') {
+              const coords = currentGeo.geometry.coordinates[0];
+              const area = calculatePolygonArea(coords);
+              const perimeter = calculatePolygonPerimeter(coords);
+              tooltipHtml = `
+                <div class="p-1.5 text-xs font-sans">
+                  <p class="font-bold text-zinc-800">${name}</p>
+                  ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
+                  <hr class="my-1 border-zinc-200" />
+                  <p class="text-[11px] text-emerald-600 font-bold">Luas: ${formatArea(area)}</p>
+                  <p class="text-[10px] text-zinc-600">Keliling: ${formatDistance(perimeter)}</p>
+                </div>
+              `;
+            } else if (geomType === 'LineString') {
+              const coords = currentGeo.geometry.coordinates;
+              const length = calculateLineLength(coords);
+              tooltipHtml = `
+                <div class="p-1.5 text-xs font-sans">
+                  <p class="font-bold text-zinc-800">${name}</p>
+                  ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
+                  <hr class="my-1 border-zinc-200" />
+                  <p class="text-[11px] text-blue-600 font-bold font-mono">Panjang: ${formatDistance(length)}</p>
+                </div>
+              `;
+            } else if (geomType === 'Point') {
+              const coords = currentGeo.geometry.coordinates;
+              tooltipHtml = `
+                <div class="p-1.5 text-xs font-sans">
+                  <p class="font-bold text-zinc-800">${name}</p>
+                  ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
+                  <hr class="my-1 border-zinc-200" />
+                  <p class="text-[10px] text-zinc-650 font-mono">Lat: ${coords[1].toFixed(5)}</p>
+                  <p class="text-[10px] text-zinc-650 font-mono">Lng: ${coords[0].toFixed(5)}</p>
+                </div>
+              `;
+            }
+
+            if (tooltipHtml) {
+              const popup = layer.getPopup();
+              if (popup) {
+                layer.setPopupContent(tooltipHtml);
+              } else {
+                layer.bindPopup(tooltipHtml);
+              }
+            }
+          };
+
+          // Initial setup
+          updatePopupContent();
 
           // Layer click focus listener
           layer.on('click', (e: L.LeafletMouseEvent) => {
@@ -689,6 +718,7 @@ export default function MapContainer({
             if (layer._pm_temp_id === selectedFeatureIdRef.current) {
               updateFocusedMeasurementsForLayer(layer);
             }
+            updatePopupContent();
           };
           layer.on('pm:edit', handleLayerGeomChange);
           layer.on('pm:drag', handleLayerGeomChange);
@@ -755,8 +785,10 @@ export default function MapContainer({
         }
       });
 
-      // Add to map viewport
-      geojsonLayer.addTo(group);
+      // Add to map viewport as flat layers to prevent Geoman nesting issues
+      geojsonLayer.eachLayer((layer: any) => {
+        group.addLayer(layer);
+      });
     }
   }, [geoJsonData]);
 
@@ -828,6 +860,20 @@ export default function MapContainer({
     }
   }, [selectedFeatureId, geoJsonData]);
 
+  const handleCopyCoordinates = () => {
+    const coordsToCopy = rightClickCoords || hoverCoords;
+    if (!coordsToCopy) return;
+    
+    let textToCopy = '';
+    if (coordinateMode === 'UTM') {
+      textToCopy = latLngToUtm(coordsToCopy.lat, coordsToCopy.lng).formatted;
+    } else {
+      textToCopy = `${coordsToCopy.lat.toFixed(6)}, ${coordsToCopy.lng.toFixed(6)}`;
+    }
+    
+    navigator.clipboard.writeText(textToCopy);
+  };
+
   // Handle Base Map change
   const handleBaseLayerSelect = (layerId: string) => {
     const map = mapInstanceRef.current;
@@ -842,7 +888,8 @@ export default function MapContainer({
 
     const nextTileLayer = L.tileLayer(selectedLayer.url, {
       attribution: selectedLayer.attribution,
-      maxZoom: 19
+      maxZoom: 24,
+      maxNativeZoom: 19
     }).addTo(map);
 
     activeTileLayerRef.current = nextTileLayer;
@@ -851,13 +898,14 @@ export default function MapContainer({
   };
 
   return (
-    <div className="flex-1 relative h-full">
-      {/* MAP MOUNT ELEMENT CONTAINER */}
-      <div 
-        ref={mapContainerRef} 
-        id="map" 
-        className="w-full h-full text-zinc-900 border-none select-none z-[1]"
-      />
+    <ContextMenu>
+      <ContextMenuTrigger className="flex-1 relative h-full block">
+        {/* MAP MOUNT ELEMENT CONTAINER */}
+          <div 
+            ref={mapContainerRef} 
+            id="map" 
+            className="w-full h-full text-zinc-900 border-none select-none z-[1]"
+          />
 
       {/* CUSTOM FLOATING BASELAYERS SWITCHER CARD BUTTON */}
       <div className="absolute top-4 right-4 z-[1000]">
@@ -927,6 +975,14 @@ export default function MapContainer({
           <span className="text-zinc-400 italic">Pindahkan kursor di atas peta</span>
         )}
       </div>
-    </div>
+      </ContextMenuTrigger>
+
+      <ContextMenuContent className="w-48 z-[9999]">
+        <ContextMenuItem onClick={handleCopyCoordinates} className="cursor-pointer flex items-center gap-2">
+          <Copy className="w-4 h-4 text-zinc-500" />
+          <span className="font-medium">Salin Koordinat</span>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
