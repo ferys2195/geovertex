@@ -356,11 +356,11 @@ export default function MapContainer({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Create the Leaflet Map
     const map = L.map(mapContainerRef.current, {
       center: [-6.1754, 106.8272], // Central Monas, Jakarta
       zoom: 13,
       zoomControl: false, // Customize position of controls
+      maxZoom: 24,
     });
 
     mapInstanceRef.current = map;
@@ -386,7 +386,8 @@ export default function MapContainer({
     const defaultLayer = BASE_LAYERS.find(l => l.id === activeLayerId) || BASE_LAYERS[0];
     const tileLayer = L.tileLayer(defaultLayer.url, {
       attribution: defaultLayer.attribution,
-      maxZoom: 19
+      maxZoom: 24,
+      maxNativeZoom: 19
     }).addTo(map);
     activeTileLayerRef.current = tileLayer;
 
@@ -842,7 +843,8 @@ export default function MapContainer({
 
     const nextTileLayer = L.tileLayer(selectedLayer.url, {
       attribution: selectedLayer.attribution,
-      maxZoom: 19
+      maxZoom: 24,
+      maxNativeZoom: 19
     }).addTo(map);
 
     activeTileLayerRef.current = nextTileLayer;
