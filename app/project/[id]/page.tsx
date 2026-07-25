@@ -485,6 +485,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             geoJsonData={geoJsonData}
             onGeoJsonChange={handleUpdateGeoJSON}
             coordinateMode={coordinateMode}
+            onCoordinateModeChange={setCoordinateMode}
             zoomToTrigger={zoomToTrigger}
             selectedPdfFeatureId={selectedPdfFeatureId}
             onSelectPdfFeature={setSelectedPdfFeatureId}

@@ -7,7 +7,7 @@ import { CoordinateMode } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
 import { latLngToUtm } from '@/lib/utm';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '@/lib/gisCalc';
-import { Layers, Crosshair, MapPin, Maximize2, Copy, Calculator } from 'lucide-react';
+import { Layers, Crosshair, MapPin, Maximize2, Copy, Calculator, ArrowRightLeft } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -20,6 +20,7 @@ interface MapContainerProps {
   geoJsonData?: FeatureCollection;
   onGeoJsonChange?: (data: FeatureCollection) => void;
   coordinateMode?: CoordinateMode;
+  onCoordinateModeChange?: (mode: CoordinateMode) => void;
   hoverCoords?: { lat: number; lng: number } | null;
   setHoverCoords?: (coords: { lat: number; lng: number } | null) => void;
   zoomToTrigger?: { id: string; time: number } | null;
@@ -66,6 +67,7 @@ export default function MapContainer({
   geoJsonData = { type: 'FeatureCollection', features: [] },
   onGeoJsonChange = () => {},
   coordinateMode = 'UTM',
+  onCoordinateModeChange = () => {},
   hoverCoords = null,
   setHoverCoords = () => {},
   zoomToTrigger = null,
@@ -82,6 +84,11 @@ export default function MapContainer({
   const [rightClickCoords, setRightClickCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isUtmDialogOpen, setIsUtmDialogOpen] = useState<boolean>(false);
   const [internalHoverCoords, setInternalHoverCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [activeCoordMode, setActiveCoordMode] = useState<CoordinateMode>(coordinateMode);
+
+  useEffect(() => {
+    setActiveCoordMode(coordinateMode);
+  }, [coordinateMode]);
 
   // Drawing mode measurement and tracking refs
   const isDrawingRef = useRef<boolean>(false);
@@ -1008,7 +1015,7 @@ export default function MapContainer({
               <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
               <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
               {currentHover ? (
-                coordinateMode === 'UTM' ? (
+                activeCoordMode === 'UTM' ? (
                   <span className="text-slate-900 font-extrabold">
                     {latLngToUtm(currentHover.lat, currentHover.lng).formatted}
                   </span>
@@ -1020,6 +1027,22 @@ export default function MapContainer({
               ) : (
                 <span className="text-slate-500 font-medium italic">Pindahkan kursor di atas peta</span>
               )}
+
+              <div className="h-3 w-px bg-slate-200 mx-1" />
+
+              {/* TOGGLE COORDINATE MODE SWITCH BUTTON */}
+              <button
+                onClick={() => {
+                  const nextMode: CoordinateMode = activeCoordMode === 'UTM' ? 'LatLng' : 'UTM';
+                  setActiveCoordMode(nextMode);
+                  onCoordinateModeChange?.(nextMode);
+                }}
+                className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                title="Klik untuk Ganti Format Koordinat (UTM ↔ Lat/Lng)"
+              >
+                <ArrowRightLeft className="w-3 h-3 text-blue-600" />
+                <span>{activeCoordMode === 'UTM' ? 'UTM' : 'Lat/Lng'}</span>
+              </button>
             </div>
           );
         })()}
