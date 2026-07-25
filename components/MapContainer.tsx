@@ -81,6 +81,7 @@ export default function MapContainer({
   const [showLayerMenu, setShowLayerMenu] = useState<boolean>(false);
   const [rightClickCoords, setRightClickCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isUtmDialogOpen, setIsUtmDialogOpen] = useState<boolean>(false);
+  const [internalHoverCoords, setInternalHoverCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Drawing mode measurement and tracking refs
   const isDrawingRef = useRef<boolean>(false);
@@ -570,13 +571,16 @@ export default function MapContainer({
 
     // 5. Cursor Hover & Live Measurement Update Listener
     map.on('mousemove', (e: L.LeafletMouseEvent) => {
-      setHoverCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+      const coords = { lat: e.latlng.lat, lng: e.latlng.lng };
+      setInternalHoverCoords(coords);
+      setHoverCoords(coords);
       if (activeWorkingLayerRef.current) {
         updateDrawingMeasurements(e.latlng);
       }
     });
 
     map.on('mouseout', () => {
+      setInternalHoverCoords(null);
       setHoverCoords(null);
     });
 
@@ -997,23 +1001,28 @@ export default function MapContainer({
         </div>
 
         {/* MOUSE HOVER COORDINATES METRIC DISPLAY (UTM OR LAT/LNG STATUS BAR) */}
-        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px]">
-          <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-          <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
-          {hoverCoords ? (
-            coordinateMode === 'UTM' ? (
-              <span className="text-zinc-900 font-extrabold">
-                {latLngToUtm(hoverCoords.lat, hoverCoords.lng).formatted}
-              </span>
-            ) : (
-              <span className="text-zinc-900 font-extrabold">
-                Lat: <span>{hoverCoords.lat.toFixed(6)}°</span>, Lng: <span>{hoverCoords.lng.toFixed(6)}°</span>
-              </span>
-            )
-          ) : (
-            <span className="text-zinc-400 italic">Pindahkan kursor di atas peta</span>
-          )}
-        </div>
+        {(() => {
+          const currentHover = hoverCoords || internalHoverCoords;
+          return (
+            <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px]">
+              <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+              <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
+              {currentHover ? (
+                coordinateMode === 'UTM' ? (
+                  <span className="text-slate-900 font-extrabold">
+                    {latLngToUtm(currentHover.lat, currentHover.lng).formatted}
+                  </span>
+                ) : (
+                  <span className="text-slate-900 font-extrabold">
+                    Lat: <span>{currentHover.lat.toFixed(6)}°</span>, Lng: <span>{currentHover.lng.toFixed(6)}°</span>
+                  </span>
+                )
+              ) : (
+                <span className="text-slate-500 font-medium italic">Pindahkan kursor di atas peta</span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* UTM CONVERTER DIALOG */}
         <UtmConverterDialog
