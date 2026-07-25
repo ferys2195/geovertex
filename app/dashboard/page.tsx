@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Layers, Plus, Map, Calendar, Users, Trash2, Edit3, ExternalLink, Copy, Search, LogOut, ShieldAlert, Sparkles, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { isDevModeAllowed } from "@/lib/utils";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -44,6 +45,10 @@ export default function DashboardPage() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
+        if (!isDevModeAllowed()) {
+          router.push("/login");
+          return;
+        }
         // Fallback for offline demo mode if no session
         setUser({ id: "demo-user-1", email: "demo@geovertex.com" });
         setProfile({

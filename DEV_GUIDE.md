@@ -11,7 +11,10 @@ GeoVertex SaaS dirancang dengan arsitektur **Offline-First Fallback Engine**. Ke
 ### 🌟 Keuntungan Mode Pengembang:
 1. **Zero External Dependency**: Tidak perlu koneksi internet atau registrasi akun di layanan pihak ketiga.
 2. **Instant Local Testing**: Langsung bisa menguji 100% fitur SaaS (Dashboard, Canvas Digitasi, Pengukuran Luas, Kolaborasi Tim, dan Cetak PDF Kartografi).
-3. **Persiapan Produksi Tanpa Refactoring**: Saat Anda siap mendeploy ke cloud nantinya, seluruh struktur data dan komponen sudah 100% kompatibel dengan Supabase PostGIS dan Google OAuth.
+3. **Keamanan Lingkungan Produksi (Production Safety Guard)**:
+   - Tombol **"Masuk Mode Pengembang (Demo tanpa Login)"** **HANYA muncul** saat pengembangan lokal (`npm run dev` / `NODE_ENV !== 'production'`).
+   - Pada versi **Production** (Vercel / Production Build), tombol ini **otomatis tersembunyi**.
+   - Pengguna tanpa akun yang mencoba mengakses rute `/dashboard` atau `/project/[id]` di produksi akan **otomatis di-redirect** kembali ke `/login`.
 
 ---
 

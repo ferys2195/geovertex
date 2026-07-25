@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Layers, ArrowLeft, Loader2, ShieldCheck, Map, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { isDevModeAllowed } from "@/lib/utils";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -109,15 +110,17 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <Link href="/dashboard" className="block">
-              <Button
-                variant="outline"
-                className="w-full h-11 border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 font-medium text-xs rounded-xl flex items-center justify-center gap-2"
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Masuk Mode Pengembang (Demo tanpa Login)</span>
-              </Button>
-            </Link>
+            {isDevModeAllowed() && (
+              <Link href="/dashboard" className="block">
+                <Button
+                  variant="outline"
+                  className="w-full h-11 border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 font-medium text-xs rounded-xl flex items-center justify-center gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Masuk Mode Pengembang (Demo tanpa Login)</span>
+                </Button>
+              </Link>
+            )}
           </div>
 
           <div className="pt-4 border-t border-slate-800 space-y-2 text-xs text-slate-400">

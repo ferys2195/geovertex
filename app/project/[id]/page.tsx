@@ -10,6 +10,8 @@ import { MapFeatureExportData } from "@/lib/export/pdfExporter";
 import { Button } from "@/components/ui/button";
 import { Layers, Share2, Download, Cloud, CloudOff, Loader2, ArrowLeft, Shield, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { isDevModeAllowed } from "@/lib/utils";
 
 const DynamicMapContainer = dynamic(() => import("@/components/MapContainer"), {
   ssr: false,
@@ -25,6 +27,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const resolvedParams = use(params);
   const projectId = resolvedParams.id;
 
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole>("owner");
   const [members, setMembers] = useState<TeamMemberItem[]>([]);
@@ -49,6 +52,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     try {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        if (!isDevModeAllowed()) {
+          router.push("/login");
+          return;
+        }
+      }
 
       if (!session?.user || projectId.startsWith("demo-proj")) {
         // Demo project fallback
