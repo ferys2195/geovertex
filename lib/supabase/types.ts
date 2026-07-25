@@ -17,9 +17,9 @@ export interface Project {
   owner_id: string;
   title: string;
   description: string;
-  center_lat: number;
-  center_lng: number;
-  zoom_level: number;
+  center_lat?: number;
+  center_lng?: number;
+  zoom_level?: number;
   created_at: string;
   updated_at: string;
   // Joined fields

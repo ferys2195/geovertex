@@ -22,9 +22,6 @@ CREATE TABLE IF NOT EXISTS public.projects (
   owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
-  center_lat DOUBLE PRECISION DEFAULT -6.200000,
-  center_lng DOUBLE PRECISION DEFAULT 106.816666,
-  zoom_level INT DEFAULT 13,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

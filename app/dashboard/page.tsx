@@ -23,8 +23,6 @@ export default function DashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [newLat, setNewLat] = useState("-6.200000");
-  const [newLng, setNewLng] = useState("106.816666");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -145,9 +143,6 @@ export default function DashboardPage() {
           owner_id: user.id,
           title: newTitle,
           description: newDesc,
-          center_lat: parseFloat(newLat) || -6.2,
-          center_lng: parseFloat(newLng) || 106.816666,
-          zoom_level: 13,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           members_count: 1,
@@ -167,9 +162,6 @@ export default function DashboardPage() {
           owner_id: user.id,
           title: newTitle.trim(),
           description: newDesc.trim(),
-          center_lat: parseFloat(newLat) || -6.2,
-          center_lng: parseFloat(newLng) || 106.816666,
-          zoom_level: 13,
         })
         .select()
         .single();
@@ -399,25 +391,6 @@ export default function DashboardPage() {
                 onChange={(e) => setNewDesc(e.target.value)}
                 className="bg-slate-950 border-slate-800 text-xs"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Pusat Latitude</label>
-                <Input
-                  value={newLat}
-                  onChange={(e) => setNewLat(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-xs font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Pusat Longitude</label>
-                <Input
-                  value={newLng}
-                  onChange={(e) => setNewLng(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-xs font-mono"
-                />
-              </div>
             </div>
 
             {errorMessage && (
