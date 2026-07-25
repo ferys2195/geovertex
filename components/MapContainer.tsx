@@ -121,6 +121,8 @@ export default function MapContainer({
   // This avoids re-drawing loops during user interaction on the canvas.
   const mapGeoJsonStrRef = useRef<string>('');
   const isInternalUserActionRef = useRef<boolean>(false);
+  const syncMapToStateRef = useRef<() => void>(() => {});
+  const bindLayerInteractiveListenersRef = useRef<(layer: any, props?: any) => void>(() => {});
 
   // Helper to extract a flat array of L.LatLng from leaflet geometries
   const getFlatLatLngs = (latlngs: any): L.LatLng[] => {
@@ -498,6 +500,107 @@ export default function MapContainer({
       onGeoJsonChange(updatedCollection);
     };
 
+    syncMapToStateRef.current = syncMapToState;
+
+    const bindLayerInteractiveListeners = (layer: any, props: any = {}) => {
+      if (!layer) return;
+
+      if (!layer._pm_temp_id) {
+        layer._pm_temp_id = props.id || Math.random().toString(36).substring(2, 11);
+      }
+
+      const updatePopupContent = () => {
+        let tooltipHtml = '';
+        let currentGeo: any = null;
+        if (typeof layer.toGeoJSON === 'function') {
+          try {
+            currentGeo = layer.toGeoJSON();
+          } catch {
+            currentGeo = null;
+          }
+        }
+
+        const name = props.name || layer.feature?.properties?.name || 'Geometri Lahan';
+        const desc = props.description || layer.feature?.properties?.description || '';
+
+        if (layer instanceof L.Polygon || currentGeo?.geometry?.type === 'Polygon') {
+          const latlngs = layer.getLatLngs ? layer.getLatLngs() : [];
+          const pts = getFlatLatLngs(latlngs);
+          const coords = pts.map((p) => [p.lng, p.lat]);
+          if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
+            coords.push(coords[0]);
+          }
+          const area = calculatePolygonArea(coords);
+          const perimeter = calculatePolygonPerimeter(coords);
+          tooltipHtml = `
+            <div class="p-2 text-xs font-sans min-w-[160px]">
+              <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
+              ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
+              <hr class="my-1.5 border-zinc-200" />
+              <p class="text-xs text-emerald-600 font-extrabold">Luas: ${formatArea(area)}</p>
+              <p class="text-[11px] text-zinc-600 font-medium">Keliling: ${formatDistance(perimeter)}</p>
+            </div>
+          `;
+        } else if (layer instanceof L.Polyline || currentGeo?.geometry?.type === 'LineString') {
+          const latlngs = layer.getLatLngs ? layer.getLatLngs() : [];
+          const pts = getFlatLatLngs(latlngs);
+          const coords = pts.map((p) => [p.lng, p.lat]);
+          const length = calculateLineLength(coords);
+          tooltipHtml = `
+            <div class="p-2 text-xs font-sans min-w-[160px]">
+              <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
+              ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
+              <hr class="my-1.5 border-zinc-200" />
+              <p class="text-xs text-blue-600 font-extrabold font-mono">Panjang: ${formatDistance(length)}</p>
+            </div>
+          `;
+        } else if (layer instanceof L.Marker || currentGeo?.geometry?.type === 'Point') {
+          const pt = layer.getLatLng ? layer.getLatLng() : L.latLng(0, 0);
+          tooltipHtml = `
+            <div class="p-2 text-xs font-sans min-w-[160px]">
+              <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
+              ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
+              <hr class="my-1.5 border-zinc-200" />
+              <p class="text-[11px] text-zinc-700 font-mono">Lat: ${pt.lat.toFixed(6)}°</p>
+              <p class="text-[11px] text-zinc-700 font-mono">Lng: ${pt.lng.toFixed(6)}°</p>
+            </div>
+          `;
+        }
+
+        if (tooltipHtml) {
+          const popup = layer.getPopup();
+          if (popup) {
+            layer.setPopupContent(tooltipHtml);
+          } else {
+            layer.bindPopup(tooltipHtml, { autoPan: true });
+          }
+        }
+      };
+
+      updatePopupContent();
+
+      layer.on('click', (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        setSelectedFeatureId(layer._pm_temp_id);
+        updatePopupContent();
+      });
+
+      const handleLayerGeomChange = () => {
+        if (layer._pm_temp_id === selectedFeatureIdRef.current) {
+          updateFocusedMeasurementsForLayer(layer);
+        }
+        updatePopupContent();
+        syncMapToState();
+      };
+
+      layer.on('pm:edit', handleLayerGeomChange);
+      layer.on('pm:drag', handleLayerGeomChange);
+      layer.on('pm:markerdrag', handleLayerGeomChange);
+      layer.on('pm:dragend', handleLayerGeomChange);
+    };
+
+    bindLayerInteractiveListenersRef.current = bindLayerInteractiveListeners;
+
     // Callback on shape creation
     map.on('pm:create', (e: any) => {
       const layer = e.layer;
@@ -515,6 +618,12 @@ export default function MapContainer({
         });
       }
 
+      // Bind interactive click & popup listeners!
+      bindLayerInteractiveListeners(layer, {
+        id: layer._pm_temp_id,
+        name: 'Geometri Baru',
+      });
+
       // Add to main feature group
       geojsonGroupRef.current?.addLayer(layer);
 
@@ -526,6 +635,7 @@ export default function MapContainer({
         syncMapToState();
       });
 
+      setSelectedFeatureId(layer._pm_temp_id);
       syncMapToState();
     });
 
@@ -678,148 +788,13 @@ export default function MapContainer({
           return L.marker(latlng, { icon });
         },
         onEachFeature: (feature: any, layer: any) => {
-          // Sync internal Geoman ID
-          layer._pm_temp_id = feature.properties?.id || Math.random().toString(36).substring(2, 11);
+          bindLayerInteractiveListenersRef.current(layer, feature.properties || {});
 
-          // Calculate measurement tooltips and bind them
-          const updatePopupContent = () => {
-            let tooltipHtml = '';
-            let currentGeo: any = null;
-            if (typeof layer.toGeoJSON === 'function') {
-              currentGeo = layer.toGeoJSON();
-            } else {
-              currentGeo = feature;
-            }
-
-            const geomType = currentGeo.geometry?.type;
-            const name = feature.properties?.name || 'Titik Tanpa Nama';
-            const desc = feature.properties?.description || '';
-
-            if (geomType === 'Polygon') {
-              const coords = currentGeo.geometry.coordinates[0];
-              const area = calculatePolygonArea(coords);
-              const perimeter = calculatePolygonPerimeter(coords);
-              tooltipHtml = `
-                <div class="p-1.5 text-xs font-sans">
-                  <p class="font-bold text-zinc-800">${name}</p>
-                  ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-                  <hr class="my-1 border-zinc-200" />
-                  <p class="text-[11px] text-emerald-600 font-bold">Luas: ${formatArea(area)}</p>
-                  <p class="text-[10px] text-zinc-600">Keliling: ${formatDistance(perimeter)}</p>
-                </div>
-              `;
-            } else if (geomType === 'LineString') {
-              const coords = currentGeo.geometry.coordinates;
-              const length = calculateLineLength(coords);
-              tooltipHtml = `
-                <div class="p-1.5 text-xs font-sans">
-                  <p class="font-bold text-zinc-800">${name}</p>
-                  ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-                  <hr class="my-1 border-zinc-200" />
-                  <p class="text-[11px] text-blue-600 font-bold font-mono">Panjang: ${formatDistance(length)}</p>
-                </div>
-              `;
-            } else if (geomType === 'Point') {
-              const coords = currentGeo.geometry.coordinates;
-              tooltipHtml = `
-                <div class="p-1.5 text-xs font-sans">
-                  <p class="font-bold text-zinc-800">${name}</p>
-                  ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-                  <hr class="my-1 border-zinc-200" />
-                  <p class="text-[10px] text-zinc-650 font-mono">Lat: ${coords[1].toFixed(5)}</p>
-                  <p class="text-[10px] text-zinc-650 font-mono">Lng: ${coords[0].toFixed(5)}</p>
-                </div>
-              `;
-            }
-
-            if (tooltipHtml) {
-              const popup = layer.getPopup();
-              if (popup) {
-                layer.setPopupContent(tooltipHtml);
-              } else {
-                layer.bindPopup(tooltipHtml);
-              }
-            }
-          };
-
-          // Initial setup
-          updatePopupContent();
-
-          // Layer click focus listener
-          layer.on('click', (e: L.LeafletMouseEvent) => {
-            // Prevent map-wide click de-selection from firing instantly
-            L.DomEvent.stopPropagation(e);
-            setSelectedFeatureId(layer._pm_temp_id);
-          });
-
-          // Interactive updates on shape changes (marker drag, drag, vertex adjustments)
-          const handleLayerGeomChange = () => {
-            if (layer._pm_temp_id === selectedFeatureIdRef.current) {
-              updateFocusedMeasurementsForLayer(layer);
-            }
-            updatePopupContent();
-          };
-          layer.on('pm:edit', handleLayerGeomChange);
-          layer.on('pm:drag', handleLayerGeomChange);
-          layer.on('pm:markerdrag', handleLayerGeomChange);
-          layer.on('pm:dragend', handleLayerGeomChange);
-
-          // Attach Geoman listeners back to manually imported layers
-          layer.on('pm:edit', () => {
-            const currentFeatures: any[] = [];
-            group.getLayers().forEach((l: any) => {
-              if (typeof l.toGeoJSON === 'function') {
-                const geo = l.toGeoJSON();
-                geo.properties = geo.properties || {};
-                geo.properties.id = l._pm_temp_id;
-                
-                if (l.feature && l.feature.properties) {
-                  geo.properties = { ...l.feature.properties, ...geo.properties };
-                }
-                currentFeatures.push(geo);
-              }
-            });
-            const updated: FeatureCollection = { type: 'FeatureCollection', features: currentFeatures };
-            mapGeoJsonStrRef.current = JSON.stringify(updated);
-            onGeoJsonChange(updated);
-          });
-
-          layer.on('pm:dragend', () => {
-            const currentFeatures: any[] = [];
-            group.getLayers().forEach((l: any) => {
-              if (typeof l.toGeoJSON === 'function') {
-                const geo = l.toGeoJSON();
-                geo.properties = geo.properties || {};
-                geo.properties.id = l._pm_temp_id;
-                if (l.feature && l.feature.properties) {
-                  geo.properties = { ...l.feature.properties, ...geo.properties };
-                }
-                currentFeatures.push(geo);
-              }
-            });
-            const updated: FeatureCollection = { type: 'FeatureCollection', features: currentFeatures };
-            mapGeoJsonStrRef.current = JSON.stringify(updated);
-            onGeoJsonChange(updated);
-          });
-
+          layer.on('pm:edit', () => syncMapToStateRef.current());
+          layer.on('pm:dragend', () => syncMapToStateRef.current());
           layer.on('pm:remove', () => {
-            group.removeLayer(layer);
-            
-            const currentFeatures: any[] = [];
-            group.getLayers().forEach((l: any) => {
-              if (typeof l.toGeoJSON === 'function') {
-                const geo = l.toGeoJSON();
-                geo.properties = geo.properties || {};
-                geo.properties.id = l._pm_temp_id;
-                if (l.feature && l.feature.properties) {
-                  geo.properties = { ...l.feature.properties, ...geo.properties };
-                }
-                currentFeatures.push(geo);
-              }
-            });
-            const updated: FeatureCollection = { type: 'FeatureCollection', features: currentFeatures };
-            mapGeoJsonStrRef.current = JSON.stringify(updated);
-            onGeoJsonChange(updated);
+            geojsonGroupRef.current?.removeLayer(layer);
+            syncMapToStateRef.current();
           });
         }
       });
