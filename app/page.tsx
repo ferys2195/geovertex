@@ -23,6 +23,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+import { FeatureCollection } from "geojson";
+
 // Dynamically load MapContainer for Sandbox Demo
 const DynamicMapContainer = dynamic(() => import("@/components/MapContainer"), {
   ssr: false,
@@ -35,6 +37,10 @@ const DynamicMapContainer = dynamic(() => import("@/components/MapContainer"), {
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<"demo" | "features">("demo");
+  const [sandboxGeoJson, setSandboxGeoJson] = useState<FeatureCollection>({
+    type: "FeatureCollection",
+    features: [],
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
@@ -143,7 +149,10 @@ export default function LandingPage() {
           </div>
 
           <div className="h-[520px] rounded-2xl overflow-hidden border border-slate-800/80 shadow-inner relative">
-            <DynamicMapContainer />
+            <DynamicMapContainer
+              geoJsonData={sandboxGeoJson}
+              onGeoJsonChange={setSandboxGeoJson}
+            />
           </div>
         </div>
       </section>

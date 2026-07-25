@@ -44,7 +44,7 @@ const BASE_LAYERS = [
     name: 'Esri Satellite Imagery',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    maxNativeZoom: 19,
+    maxNativeZoom: 18,
     maxZoom: 24,
   },
   {
@@ -120,6 +120,7 @@ export default function MapContainer({
   // Ref to track current serialized GeoJSON on the map.
   // This avoids re-drawing loops during user interaction on the canvas.
   const mapGeoJsonStrRef = useRef<string>('');
+  const isInternalUserActionRef = useRef<boolean>(false);
 
   // Helper to extract a flat array of L.LatLng from leaflet geometries
   const getFlatLatLngs = (latlngs: any): L.LatLng[] => {
@@ -447,6 +448,8 @@ export default function MapContainer({
     const syncMapToState = () => {
       if (!geojsonGroupRef.current) return;
       
+      isInternalUserActionRef.current = true;
+
       const features: any[] = [];
       const layers = geojsonGroupRef.current.getLayers();
 
@@ -622,6 +625,13 @@ export default function MapContainer({
     const map = mapInstanceRef.current;
     const group = geojsonGroupRef.current;
     if (!map || !group) return;
+
+    // If change was triggered internally by user drawing/editing on canvas, skip clearing layers!
+    if (isInternalUserActionRef.current) {
+      isInternalUserActionRef.current = false;
+      mapGeoJsonStrRef.current = JSON.stringify(geoJsonData);
+      return;
+    }
 
     const currentExternalStr = JSON.stringify(geoJsonData);
     
