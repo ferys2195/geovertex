@@ -73,7 +73,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 pt-2">
             <Button
               onClick={handleGoogleLogin}
               disabled={isLoading}
@@ -108,6 +108,16 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
+
+            <Link href="/dashboard" className="block">
+              <Button
+                variant="outline"
+                className="w-full h-11 border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 font-medium text-xs rounded-xl flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Masuk Mode Pengembang (Demo tanpa Login)</span>
+              </Button>
+            </Link>
           </div>
 
           <div className="pt-4 border-t border-slate-800 space-y-2 text-xs text-slate-400">
