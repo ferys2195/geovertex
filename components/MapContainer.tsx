@@ -980,19 +980,19 @@ export default function MapContainer({
         <div className="absolute top-4 left-14 z-[1000] flex items-center gap-2">
           <button
             onClick={() => setIsUtmDialogOpen(true)}
-            className="bg-white/95 backdrop-blur-xs hover:bg-white text-zinc-850 px-3 py-1.5 rounded-md border border-zinc-200/80 shadow-md font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="bg-white/95 backdrop-blur-xs hover:bg-white text-slate-900 px-3 py-1.5 rounded-md border border-slate-200 shadow-md font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
             title="Buka UTM Converter & Input Koordinat"
           >
-            <Calculator className="w-3.5 h-3.5 text-blue-600" />
-            <span>UTM Converter</span>
+            <Calculator className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="text-slate-900 font-extrabold">UTM Converter</span>
           </button>
 
           {/* QUICK INSTRUCTIONS BANNER */}
-          <div className="hidden md:block bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-md border border-zinc-200/80 text-zinc-800 shadow-xs">
-            <span className="text-[10px] font-bold tracking-wide flex items-center gap-1.5">
+          <div className="hidden md:block bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-900 shadow-xs">
+            <span className="text-[10px] font-bold tracking-wide flex items-center gap-1.5 text-slate-800">
               <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-950"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
               </span>
               Double-Klik jika selesai menggambar jalur/area. Drag titik untuk mengubah geometri.
             </span>
@@ -1000,9 +1000,9 @@ export default function MapContainer({
         </div>
 
         {/* MOUSE HOVER COORDINATES METRIC DISPLAY (UTM OR LAT/LNG STATUS BAR) */}
-        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-zinc-850 py-1.5 px-3.5 rounded-lg border border-zinc-200/80 shadow-md flex items-center gap-2 font-mono text-[11px]">
-          <Crosshair className="w-3.5 h-3.5 text-zinc-650 animate-pulse" />
-          <span className="text-zinc-400 border-r border-zinc-150 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px]">
+          <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+          <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
           {hoverCoords ? (
             coordinateMode === 'UTM' ? (
               <span className="text-zinc-900 font-extrabold">
