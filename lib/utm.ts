@@ -12,6 +12,23 @@ const E2_SQR = (WGS84_A * WGS84_A - WGS84_B * WGS84_B) / (WGS84_B * WGS84_B); //
 /**
  * Returns the UTM Zone Letter for a given Latitude
  */
+export function getUtmZoneFromLongitude(lng: number): number {
+  return Math.floor((lng + 180.0) / 6.0) + 1;
+}
+
+export function getLatitudeBand(lat: number): string {
+  return getUtmLetter(lat);
+}
+
+export function latLngToUtmWithZone(
+  pt: { lat: number; lng: number },
+  zoneNumber: number,
+  hemisphere: 'north' | 'south'
+): { easting: number; northing: number } {
+  const result = latLngToUtm(pt.lat, pt.lng);
+  return { easting: result.easting, northing: result.northing };
+}
+
 export function getUtmLetter(lat: number): string {
   if (lat < -80 || lat > 84) {
     return 'Z'; // Outside UTM boundaries

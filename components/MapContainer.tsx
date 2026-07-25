@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/context-menu";
 
 interface MapContainerProps {
-  geoJsonData: FeatureCollection;
-  onGeoJsonChange: (data: FeatureCollection) => void;
-  coordinateMode: CoordinateMode;
-  hoverCoords: { lat: number; lng: number } | null;
-  setHoverCoords: (coords: { lat: number; lng: number } | null) => void;
-  zoomToTrigger: { id: string; time: number } | null;
+  geoJsonData?: FeatureCollection;
+  onGeoJsonChange?: (data: FeatureCollection) => void;
+  coordinateMode?: CoordinateMode;
+  hoverCoords?: { lat: number; lng: number } | null;
+  setHoverCoords?: (coords: { lat: number; lng: number } | null) => void;
+  zoomToTrigger?: { id: string; time: number } | null;
+  readOnly?: boolean;
 }
 
 // Map Base Layers configurations
@@ -59,12 +60,13 @@ const BASE_LAYERS = [
 ];
 
 export default function MapContainer({
-  geoJsonData,
-  onGeoJsonChange,
-  coordinateMode,
-  hoverCoords,
-  setHoverCoords,
-  zoomToTrigger
+  geoJsonData = { type: 'FeatureCollection', features: [] },
+  onGeoJsonChange = () => {},
+  coordinateMode = 'UTM',
+  hoverCoords = null,
+  setHoverCoords = () => {},
+  zoomToTrigger = null,
+  readOnly = false
 }: MapContainerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
