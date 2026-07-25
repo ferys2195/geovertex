@@ -8,10 +8,13 @@ import { ExportModal } from "@/components/ExportModal";
 import { ShareModal, TeamMemberItem } from "@/components/ShareModal";
 import { MapFeatureExportData } from "@/lib/export/pdfExporter";
 import { Button } from "@/components/ui/button";
-import { Layers, Share2, Download, Cloud, CloudOff, Loader2, ArrowLeft, Shield, Sparkles } from "lucide-react";
+import { Layers, Share2, Download, Cloud, CloudOff, Loader2, ArrowLeft, Shield, Sparkles, PanelLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { isDevModeAllowed } from "@/lib/utils";
+import Sidebar from "@/components/Sidebar";
+import { FeatureCollection } from "geojson";
+import { CoordinateMode, GisFeatureProperties } from "@/lib/types";
 
 const DynamicMapContainer = dynamic(() => import("@/components/MapContainer"), {
   ssr: false,
@@ -38,7 +41,10 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [saveStatus, setSaveStatus] = useState<"synced" | "saving" | "unsaved">("synced");
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Modals & Feature Selection
+  // Sidebar & GIS Canvas States
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [coordinateMode, setCoordinateMode] = useState<CoordinateMode>("UTM");
+  const [zoomToTrigger, setZoomToTrigger] = useState<{ id: string; time: number } | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedPdfFeatureId, setSelectedPdfFeatureId] = useState<string | null>(null);
@@ -281,6 +287,102 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  const geoJsonData: FeatureCollection = {
+    type: "FeatureCollection",
+    features: mapFeatures.map((f) => {
+      let geometry: any;
+      if (f.type === "Polygon" || f.type === "Rectangle") {
+        const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
+        if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
+          coords.push(coords[0]);
+        }
+        geometry = { type: "Polygon", coordinates: [coords] };
+      } else if (f.type === "Polyline") {
+        geometry = { type: "LineString", coordinates: f.latLngs.map(([lat, lng]) => [lng, lat]) };
+      } else {
+        const pt = f.latLngs[0] || [0, 0];
+        geometry = { type: "Point", coordinates: [pt[1], pt[0]] };
+      }
+
+      return {
+        type: "Feature",
+        geometry,
+        properties: {
+          id: f.id,
+          name: f.name,
+          description: f.properties?.description || "",
+          color: f.color || "#2563EB",
+          ...f.properties,
+        },
+      };
+    }),
+  };
+
+  const handleZoomToFeature = (featureId: string) => {
+    setZoomToTrigger({ id: featureId, time: Date.now() });
+  };
+
+  const handleDeleteFeature = (featureId: string) => {
+    const updated = mapFeatures.filter((f) => f.id !== featureId);
+    handleFeaturesChanged(updated);
+  };
+
+  const handleUpdateFeatureProperties = (featureId: string, props: GisFeatureProperties) => {
+    const updated = mapFeatures.map((f) => {
+      if (f.id === featureId) {
+        return {
+          ...f,
+          name: props.name || f.name,
+          color: props.color || f.color,
+          properties: { ...f.properties, ...props },
+        };
+      }
+      return f;
+    });
+    handleFeaturesChanged(updated);
+  };
+
+  const handleAddPoint = (lat: number, lng: number, name: string, description: string, color?: string) => {
+    const newPt: MapFeatureExportData = {
+      id: `pt-${Date.now()}`,
+      type: "Marker",
+      name: name || "Titik Pengukuran",
+      latLngs: [[lat, lng]],
+      color: color || "#2563EB",
+      properties: { description },
+    };
+    handleFeaturesChanged([...mapFeatures, newPt]);
+  };
+
+  const handleUpdateGeoJSON = (newGeoJson: FeatureCollection) => {
+    const converted: MapFeatureExportData[] = (newGeoJson.features || []).map((feat, idx) => {
+      const props = (feat.properties || {}) as GisFeatureProperties;
+      const type = (feat.geometry?.type || "Point") as any;
+      let latLngs: [number, number][] = [];
+
+      if (type === "Polygon") {
+        const ring = (feat.geometry as any).coordinates[0] || [];
+        latLngs = ring.map((pt: [number, number]) => [pt[1], pt[0]]);
+      } else if (type === "LineString") {
+        latLngs = (feat.geometry as any).coordinates.map((pt: [number, number]) => [pt[1], pt[0]]);
+      } else if (type === "Point") {
+        const pt = (feat.geometry as any).coordinates || [0, 0];
+        latLngs = [[pt[1], pt[0]]];
+      }
+
+      return {
+        id: props.id || `f-${idx}-${Date.now()}`,
+        type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
+        name: props.name || `Geometri ${idx + 1}`,
+        latLngs,
+        color: props.color || "#2563EB",
+        properties: props,
+      };
+    });
+
+    handleFeaturesChanged(converted);
+  };
+
   const isReadOnly = currentRole === "viewer";
 
   return (
@@ -292,6 +394,18 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="h-4 w-px bg-slate-800" />
+
+          {/* Toggle Sidebar Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`h-8 w-8 text-slate-300 hover:text-white ${isSidebarOpen ? "bg-slate-800 text-blue-400" : ""}`}
+            title="Buka/Tutup Sidebar Panel"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+
           <div className="flex items-center gap-2">
             <h1 className="font-bold text-sm text-white">{project?.title || "Proyek Pemetaan"}</h1>
             <span
@@ -348,12 +462,35 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         </div>
       </header>
 
-      {/* Main Canvas Area */}
-      <div className="flex-1 relative overflow-hidden">
-        <DynamicMapContainer
-          selectedPdfFeatureId={selectedPdfFeatureId}
-          onSelectPdfFeature={setSelectedPdfFeatureId}
-        />
+      {/* Main Content Body: Sidebar + Map Canvas Container */}
+      <div className="flex-1 relative overflow-hidden flex flex-row">
+        {/* Sidebar Panel */}
+        {isSidebarOpen && (
+          <Sidebar
+            geoJsonData={geoJsonData}
+            onUpdateGeoJSON={handleUpdateGeoJSON}
+            coordinateMode={coordinateMode}
+            onZoomToFeature={handleZoomToFeature}
+            onDeleteFeature={handleDeleteFeature}
+            onUpdateFeatureProperties={handleUpdateFeatureProperties}
+            onAddPoint={handleAddPoint}
+            selectedPdfFeatureId={selectedPdfFeatureId}
+            onSelectPdfFeature={setSelectedPdfFeatureId}
+          />
+        )}
+
+        {/* Map Canvas */}
+        <div className="flex-1 relative overflow-hidden h-full">
+          <DynamicMapContainer
+            geoJsonData={geoJsonData}
+            onGeoJsonChange={handleUpdateGeoJSON}
+            coordinateMode={coordinateMode}
+            zoomToTrigger={zoomToTrigger}
+            selectedPdfFeatureId={selectedPdfFeatureId}
+            onSelectPdfFeature={setSelectedPdfFeatureId}
+            readOnly={isReadOnly}
+          />
+        </div>
       </div>
 
       {/* Modals */}
