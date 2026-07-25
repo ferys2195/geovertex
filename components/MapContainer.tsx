@@ -957,10 +957,7 @@ export default function MapContainer({
                 {BASE_LAYERS.map((layer) => (
                   <button
                     key={layer.id}
-                    onClick={() => {
-                      setActiveLayerId(layer.id);
-                      setShowLayerMenu(false);
-                    }}
+                    onClick={() => handleBaseLayerSelect(layer.id)}
                     className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
                       activeLayerId === layer.id
                         ? 'bg-zinc-900 text-white font-bold'
