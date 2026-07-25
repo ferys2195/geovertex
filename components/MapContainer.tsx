@@ -7,13 +7,14 @@ import { CoordinateMode } from '@/lib/types';
 import { FeatureCollection } from 'geojson';
 import { latLngToUtm } from '@/lib/utm';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance } from '@/lib/gisCalc';
-import { Layers, Crosshair, MapPin, Maximize2, Copy } from 'lucide-react';
+import { Layers, Crosshair, MapPin, Maximize2, Copy, Calculator } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { UtmConverterDialog } from "@/components/UtmConverterDialog";
 
 interface MapContainerProps {
   geoJsonData?: FeatureCollection;
@@ -79,6 +80,7 @@ export default function MapContainer({
   const [activeLayerId, setActiveLayerId] = useState<string>('carto-light');
   const [showLayerMenu, setShowLayerMenu] = useState<boolean>(false);
   const [rightClickCoords, setRightClickCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isUtmDialogOpen, setIsUtmDialogOpen] = useState<boolean>(false);
 
   // Drawing mode measurement and tracking refs
   const isDrawingRef = useRef<boolean>(false);
@@ -903,84 +905,125 @@ export default function MapContainer({
     setShowLayerMenu(false);
   };
 
+  const handleAddUtmPoint = (lat: number, lng: number, name: string, description: string, color?: string) => {
+    const newFeature = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [lng, lat],
+      },
+      properties: {
+        id: `pt-${Date.now()}`,
+        name: name || "Titik Pengukuran",
+        description: description || "",
+        color: color || "#3b82f6",
+      },
+    };
+
+    const updatedGeoJson: FeatureCollection = {
+      type: "FeatureCollection",
+      features: [...(geoJsonData?.features || []), newFeature as any],
+    };
+
+    onGeoJsonChange?.(updatedGeoJson);
+  };
+
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="flex-1 relative h-full block">
-        {/* MAP MOUNT ELEMENT CONTAINER */}
-          <div 
-            ref={mapContainerRef} 
-            id="map" 
-            className="w-full h-full text-zinc-900 border-none select-none z-[1]"
-          />
+      <ContextMenuTrigger className="w-full h-full block relative">
+        <div 
+          ref={mapContainerRef} 
+          className="w-full h-full z-10 font-sans"
+          style={{ cursor: readOnly ? 'default' : 'crosshair' }} 
+        />
 
-      {/* CUSTOM FLOATING BASELAYERS SWITCHER CARD BUTTON */}
-      <div className="absolute top-4 right-4 z-[1000]">
-        <div className="relative">
+        {/* BASEMAP LAYER SWITCHER FLOATING CONTROL */}
+        <div className="absolute top-4 right-4 z-[1000]">
+          <div className="relative">
+            <button
+              onClick={() => setShowLayerMenu(!showLayerMenu)}
+              className="bg-white/95 backdrop-blur-xs hover:bg-white text-zinc-800 p-2 rounded-lg border border-zinc-200/80 shadow-md transition-all flex items-center gap-2 cursor-pointer text-xs font-semibold"
+              title="Pilih Tampilan Peta Dasar"
+            >
+              <Layers className="w-4 h-4 text-zinc-650" />
+              <span className="hidden sm:inline">Peta Dasar</span>
+            </button>
+
+            {showLayerMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white/98 backdrop-blur-md rounded-xl border border-zinc-200/90 shadow-xl p-1.5 z-[1001] space-y-1">
+                <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">
+                  Pilih Tile Layer
+                </div>
+                {BASE_LAYERS.map((layer) => (
+                  <button
+                    key={layer.id}
+                    onClick={() => {
+                      setActiveLayerId(layer.id);
+                      setShowLayerMenu(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
+                      activeLayerId === layer.id
+                        ? 'bg-zinc-900 text-white font-bold'
+                        : 'hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <span>{layer.name}</span>
+                    {activeLayerId === layer.id && <div className="w-1.5 h-1.5 rounded-full bg-zinc-900" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* UTM CONVERTER TOOLBAR BUTTON */}
+        <div className="absolute top-4 left-14 z-[1000] flex items-center gap-2">
           <button
-            onClick={() => setShowLayerMenu(!showLayerMenu)}
-            className="flex items-center gap-2 p-2.5 bg-white hover:bg-zinc-50 text-zinc-850 rounded-lg shadow-sm border border-zinc-200/90 transition font-semibold text-xs cursor-pointer focus:outline-none"
-            title="Ubah Peta Dasar"
+            onClick={() => setIsUtmDialogOpen(true)}
+            className="bg-white/95 backdrop-blur-xs hover:bg-white text-zinc-850 px-3 py-1.5 rounded-md border border-zinc-200/80 shadow-md font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+            title="Buka UTM Converter & Input Koordinat"
           >
-            <Layers className="w-4 h-4 text-zinc-600" />
-            <span>Peta Dasar</span>
+            <Calculator className="w-3.5 h-3.5 text-blue-600" />
+            <span>UTM Converter</span>
           </button>
 
-          {showLayerMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white border border-zinc-200 rounded-xl shadow-md p-2.5 space-y-1 z-[1010]">
-              <div className="px-2 py-1 border-b border-zinc-100 mb-1">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Daftar Peta Dasar</span>
-              </div>
-              
-              {BASE_LAYERS.map((layer) => (
-                <button
-                  key={layer.id}
-                  onClick={() => handleBaseLayerSelect(layer.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between cursor-pointer transition ${
-                    activeLayerId === layer.id
-                      ? 'bg-zinc-100 text-zinc-950 font-bold shadow-xs'
-                      : 'hover:bg-zinc-50 text-zinc-600'
-                  }`}
-                >
-                  <span>{layer.name}</span>
-                  {activeLayerId === layer.id && <div className="w-1.5 h-1.5 rounded-full bg-zinc-900" />}
-                </button>
-              ))}
-            </div>
+          {/* QUICK INSTRUCTIONS BANNER */}
+          <div className="hidden md:block bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-md border border-zinc-200/80 text-zinc-800 shadow-xs">
+            <span className="text-[10px] font-bold tracking-wide flex items-center gap-1.5">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-950"></span>
+              </span>
+              Double-Klik jika selesai menggambar jalur/area. Drag titik untuk mengubah geometri.
+            </span>
+          </div>
+        </div>
+
+        {/* MOUSE HOVER COORDINATES METRIC DISPLAY (UTM OR LAT/LNG STATUS BAR) */}
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-zinc-850 py-1.5 px-3.5 rounded-lg border border-zinc-200/80 shadow-md flex items-center gap-2 font-mono text-[11px]">
+          <Crosshair className="w-3.5 h-3.5 text-zinc-650 animate-pulse" />
+          <span className="text-zinc-400 border-r border-zinc-150 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
+          {hoverCoords ? (
+            coordinateMode === 'UTM' ? (
+              <span className="text-zinc-900 font-extrabold">
+                {latLngToUtm(hoverCoords.lat, hoverCoords.lng).formatted}
+              </span>
+            ) : (
+              <span className="text-zinc-900 font-extrabold">
+                Lat: <span>{hoverCoords.lat.toFixed(6)}°</span>, Lng: <span>{hoverCoords.lng.toFixed(6)}°</span>
+              </span>
+            )
+          ) : (
+            <span className="text-zinc-400 italic">Pindahkan kursor di atas peta</span>
           )}
         </div>
-      </div>
 
-      {/* QUICK INSTRUCTIONS BANNER */}
-      <div className="absolute top-4 left-16 z-[1000] hidden sm:block">
-        <div className="bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-md border border-zinc-200/80 flex items-center gap-2 text-zinc-800 shadow-xs">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-950"></span>
-          </span>
-          <span className="text-[10px] font-bold tracking-wide">
-            Double-Klik jika selesai menggambar jalur/area. Drag titik untuk mengubah geometri.
-          </span>
-        </div>
-      </div>
-
-      {/* MOUSE HOVER COORDINATES METRIC DISPLAY (UTM OR LAT/LNG STATUS BAR) */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-zinc-850 py-1.5 px-3.5 rounded-lg border border-zinc-200/80 shadow-md flex items-center gap-2 font-mono text-[11px]">
-        <Crosshair className="w-3.5 h-3.5 text-zinc-650 animate-pulse" />
-        <span className="text-zinc-400 border-r border-zinc-150 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
-        {hoverCoords ? (
-          coordinateMode === 'UTM' ? (
-            <span className="text-zinc-900 font-extrabold">
-              {latLngToUtm(hoverCoords.lat, hoverCoords.lng).formatted}
-            </span>
-          ) : (
-            <span className="text-zinc-900 font-extrabold">
-              Lat: <span>{hoverCoords.lat.toFixed(6)}°</span>, Lng: <span>{hoverCoords.lng.toFixed(6)}°</span>
-            </span>
-          )
-        ) : (
-          <span className="text-zinc-400 italic">Pindahkan kursor di atas peta</span>
-        )}
-      </div>
+        {/* UTM CONVERTER DIALOG */}
+        <UtmConverterDialog
+          isOpen={isUtmDialogOpen}
+          onClose={() => setIsUtmDialogOpen(false)}
+          onAddPoint={handleAddUtmPoint}
+        />
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48 z-[9999]">
