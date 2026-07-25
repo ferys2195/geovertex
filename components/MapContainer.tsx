@@ -23,6 +23,8 @@ interface MapContainerProps {
   setHoverCoords?: (coords: { lat: number; lng: number } | null) => void;
   zoomToTrigger?: { id: string; time: number } | null;
   readOnly?: boolean;
+  selectedPdfFeatureId?: string | null;
+  onSelectPdfFeature?: (id: string | null) => void;
 }
 
 // Map Base Layers configurations
@@ -66,7 +68,9 @@ export default function MapContainer({
   hoverCoords = null,
   setHoverCoords = () => {},
   zoomToTrigger = null,
-  readOnly = false
+  readOnly = false,
+  selectedPdfFeatureId = null,
+  onSelectPdfFeature = () => {}
 }: MapContainerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);

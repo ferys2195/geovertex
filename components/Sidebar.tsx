@@ -38,6 +38,8 @@ interface SidebarProps {
   onDeleteFeature: (featureId: string) => void;
   onUpdateFeatureProperties: (featureId: string, properties: GisFeatureProperties) => void;
   onAddPoint: (lat: number, lng: number, name: string, description: string, color?: string) => void;
+  selectedPdfFeatureId?: string | null;
+  onSelectPdfFeature?: (id: string | null) => void;
 }
 
 export default function Sidebar({
@@ -47,7 +49,9 @@ export default function Sidebar({
   onZoomToFeature,
   onDeleteFeature,
   onUpdateFeatureProperties,
-  onAddPoint
+  onAddPoint,
+  selectedPdfFeatureId = null,
+  onSelectPdfFeature = () => {}
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<string>('features');
   const [rawText, setRawText] = useState<string>('');
@@ -485,6 +489,20 @@ export default function Sidebar({
 
                                   {/* Actions icons */}
                                   <div className="flex items-center gap-1 shrink-0">
+                                    <Tooltip>
+                                      <TooltipTrigger render={
+                                        <Button
+                                          variant={selectedPdfFeatureId === featureId ? "default" : "outline"}
+                                          size="icon"
+                                          onClick={() => onSelectPdfFeature(selectedPdfFeatureId === featureId ? null : featureId)}
+                                          className={`w-7 h-7 ${selectedPdfFeatureId === featureId ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : ''}`}
+                                        >
+                                          <FileCode className="w-3.5 h-3.5" />
+                                        </Button>
+                                      } />
+                                      <TooltipContent>{selectedPdfFeatureId === featureId ? "Terpilih untuk PDF" : "Pilih untuk PDF"}</TooltipContent>
+                                    </Tooltip>
+
                                     <Tooltip>
                                       <TooltipTrigger render={
                                         <Button

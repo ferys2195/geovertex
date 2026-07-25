@@ -14,16 +14,27 @@ interface ExportModalProps {
   onClose: () => void;
   projectTitle: string;
   features: MapFeatureExportData[];
+  selectedPdfFeatureId?: string | null;
+  onSelectPdfFeature?: (id: string | null) => void;
   isProTier?: boolean;
 }
 
-export function ExportModal({ isOpen, onClose, projectTitle, features, isProTier = false }: ExportModalProps) {
+export function ExportModal({
+  isOpen,
+  onClose,
+  projectTitle,
+  features,
+  selectedPdfFeatureId = null,
+  onSelectPdfFeature,
+  isProTier = false,
+}: ExportModalProps) {
   const [activeTab, setActiveTab] = useState<"pdf" | "data">("pdf");
   const [title, setTitle] = useState(projectTitle || "Peta Hasil Digitasi Lahan");
   const [subtitle, setSubtitle] = useState("GeoVertex SaaS — Collaborative GIS Platform");
   const [author, setAuthor] = useState("Drafter Pemetaan");
   const [organization, setOrganization] = useState("Surveyor Team");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
+  const [targetFeatureId, setTargetFeatureId] = useState<string | "all">(selectedPdfFeatureId || "all");
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportPDF = async () => {
@@ -36,6 +47,7 @@ export function ExportModal({ isOpen, onClose, projectTitle, features, isProTier
         organization,
         orientation,
         isProTier,
+        selectedFeatureId: targetFeatureId === "all" ? null : targetFeatureId,
       });
       onClose();
     } catch (err) {
@@ -72,6 +84,26 @@ export function ExportModal({ isOpen, onClose, projectTitle, features, isProTier
 
           <TabsContent value="pdf" className="space-y-4 pt-4">
             <div className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-emerald-500 mb-1">Target Bidang / Feature PDF</label>
+                <select
+                  value={targetFeatureId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTargetFeatureId(val);
+                    onSelectPdfFeature?.(val === "all" ? null : val);
+                  }}
+                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-xs font-medium text-foreground focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="all">🌐 Seluruh Bidang (Overview Map)</option>
+                  {features.map((feat) => (
+                    <option key={feat.id} value={feat.id}>
+                      🔹 {feat.name} ({feat.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Judul Utama Peta</label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Misal: PETA SERTIFIKAT LAHAN BLOK A" />

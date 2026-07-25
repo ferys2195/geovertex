@@ -16,6 +16,7 @@ export interface PDFExportOptions {
   baseMap?: BaseMapType;
   showGrid?: boolean;
   isProTier?: boolean;
+  selectedFeatureId?: string | null;
 }
 
 export interface MapFeatureExportData {
@@ -85,9 +86,15 @@ export const renderCartographicMapCanvas = async (
   const mapFrameWidth = mapFrameRight - mapFrameLeft;
   const mapFrameHeight = mapFrameBottom - mapFrameTop;
 
-  // Extract all points
+  // Filter features if specific feature is selected for PDF export
+  const targetFeatures = options.selectedFeatureId
+    ? features.filter((f) => f.id === options.selectedFeatureId)
+    : features;
+  const renderFeatures = targetFeatures.length > 0 ? targetFeatures : features;
+
+  // Extract all points from target features for bounds calculation
   const allPoints: [number, number][] = [];
-  features.forEach((f) => {
+  renderFeatures.forEach((f) => {
     f.latLngs.forEach((pt) => allPoints.push(pt));
   });
 
@@ -425,9 +432,14 @@ export const exportCartographicPDF = async (
   doc.setTextColor(71, 85, 105);
   doc.text(`Proyek: ${options.title || "GeoVertex Export"} | Tanggal: ${new Date().toLocaleDateString("id-ID")}`, 14, 27);
 
+  const tableFeatures = options.selectedFeatureId
+    ? features.filter((f) => f.id === options.selectedFeatureId)
+    : features;
+  const renderTableFeatures = tableFeatures.length > 0 ? tableFeatures : features;
+
   const tableData: (string | number)[][] = [];
 
-  features.forEach((feat, featIdx) => {
+  renderTableFeatures.forEach((feat, featIdx) => {
     feat.latLngs.forEach((pt, ptIdx) => {
       const lat = pt[0];
       const lng = pt[1];

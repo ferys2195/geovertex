@@ -38,9 +38,10 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [saveStatus, setSaveStatus] = useState<"synced" | "saving" | "unsaved">("synced");
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Modals
+  // Modals & Feature Selection
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [selectedPdfFeatureId, setSelectedPdfFeatureId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -349,7 +350,10 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
 
       {/* Main Canvas Area */}
       <div className="flex-1 relative overflow-hidden">
-        <DynamicMapContainer />
+        <DynamicMapContainer
+          selectedPdfFeatureId={selectedPdfFeatureId}
+          onSelectPdfFeature={setSelectedPdfFeatureId}
+        />
       </div>
 
       {/* Modals */}
@@ -358,6 +362,8 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         onClose={() => setIsExportOpen(false)}
         projectTitle={project?.title || "GeoVertex_Map"}
         features={mapFeatures}
+        selectedPdfFeatureId={selectedPdfFeatureId}
+        onSelectPdfFeature={setSelectedPdfFeatureId}
       />
 
       <ShareModal
