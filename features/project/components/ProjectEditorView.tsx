@@ -1,0 +1,652 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import dynamic from "next/dynamic";
+import { createClient } from "@/lib/supabase/client";
+import { Project, UserRole, MapFeatureRecord } from "@/lib/supabase/types";
+import { ExportModal } from "./modals/ExportModal";
+import { ShareModal } from "./modals/ShareModal";
+import { MapFeatureExportData } from "@/lib/export/pdfExporter";
+import { Button } from "@/components/ui/button";
+import { Share2, Download, Cloud, CloudOff, Loader2, ArrowLeft, PanelLeft } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { isDevModeAllowed } from "@/lib/utils";
+import { EditorSidebar } from "./EditorSidebar";
+import { FeatureCollection } from "geojson";
+import { CoordinateMode, GisFeatureProperties, TeamMemberItem } from "../types/project.types";
+
+const DynamicMapCanvas = dynamic(() => import("./MapCanvas").then((mod) => mod.MapCanvas), {
+  ssr: false,
+  loading: () => (
+    <div className="h-screen w-full bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
+      <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-500" />
+      Memuat Editor Peta Cloud...
+    </div>
+  ),
+});
+
+interface ProjectEditorViewProps {
+  projectId: string;
+}
+
+export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
+  const router = useRouter();
+  const [project, setProject] = useState<Project | null>(null);
+  const [currentRole, setCurrentRole] = useState<UserRole>("owner");
+  const [members, setMembers] = useState<TeamMemberItem[]>([]);
+  const [mapFeatures, setMapFeatures] = useState<MapFeatureExportData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Cloud Auto-Save Engine State
+  const [saveStatus, setSaveStatus] = useState<"synced" | "saving" | "unsaved">("synced");
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sidebar & GIS Canvas States
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [coordinateMode, setCoordinateMode] = useState<CoordinateMode>("UTM");
+  const [zoomToTrigger, setZoomToTrigger] = useState<{ id: string; time: number } | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [selectedPdfFeatureId, setSelectedPdfFeatureId] = useState<string | null>(null);
+  const deletedFeatureIdsRef = useRef<string[]>([]);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchProjectData();
+  }, [projectId]);
+
+  const fetchProjectData = async () => {
+    try {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        if (!isDevModeAllowed()) {
+          router.push("/login");
+          return;
+        }
+      }
+
+      if (!session?.user || projectId.startsWith("demo-proj")) {
+        // Demo project fallback
+        setProject({
+          id: projectId,
+          owner_id: "demo-user-1",
+          title: "Proyek Pemetaan Lahan (Demo)",
+          description: "Mode Uji Coba Lahan",
+          center_lat: -2.5,
+          center_lng: 118.0,
+          zoom_level: 5,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        setCurrentRole("owner");
+        setMembers([
+          { id: "mem-1", email: "surveyor@geovertex.com", full_name: "Surveyor Utama", role: "owner" },
+          { id: "mem-2", email: "drafter@geovertex.com", full_name: "Drafter Lahan", role: "editor" },
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch Project
+      const { data: projData, error: projErr } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single();
+
+      if (projErr || !projData) {
+        console.error("Project not found:", projErr);
+        setLoading(false);
+        return;
+      }
+
+      setProject(projData);
+
+      // Determine User Role
+      if (projData.owner_id === session.user.id) {
+        setCurrentRole("owner");
+      } else {
+        const { data: memData } = await supabase
+          .from("project_members")
+          .select("role")
+          .eq("project_id", projectId)
+          .eq("user_id", session.user.id)
+          .single();
+        if (memData) setCurrentRole(memData.role as UserRole);
+      }
+
+      // Fetch Team Members
+      const { data: teamData } = await supabase
+        .from("project_members")
+        .select("*, profiles(*)")
+        .eq("project_id", projectId);
+
+      const mappedMembers: TeamMemberItem[] = (teamData || []).map((m: unknown) => {
+        const memberRow = m as { id: string; role: UserRole; profiles?: { email?: string; full_name?: string; avatar_url?: string } };
+        return {
+          id: memberRow.id,
+          email: memberRow.profiles?.email || "user@geovertex.com",
+          full_name: memberRow.profiles?.full_name || memberRow.profiles?.email,
+          role: memberRow.role,
+          avatar_url: memberRow.profiles?.avatar_url,
+        };
+      });
+      setMembers(mappedMembers);
+
+      // Fetch Map Features from Supabase PostGIS
+      const { data: featData, error: featErr } = await supabase
+        .from("map_features")
+        .select("*")
+        .eq("project_id", projectId);
+
+      if (featErr) {
+        console.error("❌ [Supabase Fetch Error] Gagal mengambil data map_features:", featErr);
+      }
+
+      if (featData) {
+        const mappedFeats: MapFeatureExportData[] = featData
+          .map((f: MapFeatureRecord) => {
+            const parsedLatLngs = parseGeoJsonCoords(f);
+            return {
+              id: f.id,
+              type: f.feature_type as unknown as MapFeatureExportData["type"],
+              name: f.layer_name || "Feature",
+              latLngs: parsedLatLngs,
+              properties: f.properties || {},
+              areaSqm: f.properties?.areaSqm,
+              perimeterMeters: f.properties?.perimeterMeters,
+              color: f.properties?.color || "#2563EB",
+            };
+          })
+          .filter((f) => Array.isArray(f.latLngs) && f.latLngs.length > 0);
+
+        setMapFeatures(mappedFeats);
+      }
+    } catch (err) {
+      console.error("Error loading project:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parseGeoJsonCoords = (featureRecord: MapFeatureRecord): [number, number][] => {
+    let rawList: unknown[] = [];
+    let hint: "geojson" | "latlngs" = "geojson";
+
+    const geometry = featureRecord?.geometry;
+    let geom: { type?: string; coordinates?: unknown } | null = null;
+
+    if (geometry) {
+      if (typeof geometry === "object" && (geometry as { coordinates?: unknown }).coordinates) {
+        geom = geometry as { type?: string; coordinates?: unknown };
+      } else if (typeof geometry === "string") {
+        const cleanStr = geometry.trim();
+        if (cleanStr.startsWith("{")) {
+          try {
+            geom = JSON.parse(cleanStr);
+          } catch (e) {
+            console.error("Error parsing GeoJSON geometry string:", e);
+          }
+        }
+      }
+    }
+
+    if (geom?.coordinates) {
+      hint = "geojson";
+      const geomTypeUpper = (geom.type || "").toString().toUpperCase();
+      const coords = geom.coordinates as unknown[];
+      if (geomTypeUpper.includes("POLYGON")) {
+        rawList = geomTypeUpper.includes("MULTI") ? ((coords[0] as unknown[][])?.[0] || []) : ((coords[0] as unknown[]) || []);
+      } else if (geomTypeUpper.includes("LINE") || geomTypeUpper.includes("STRING")) {
+        rawList = geomTypeUpper.includes("MULTI") ? ((coords[0] as unknown[]) || []) : coords;
+      } else if (geomTypeUpper.includes("POINT")) {
+        const pt = Array.isArray(coords[0]) ? coords[0] : coords;
+        rawList = [pt];
+      }
+    }
+
+    if (rawList.length === 0 && Array.isArray(featureRecord?.properties?.latLngs) && featureRecord.properties.latLngs.length > 0) {
+      rawList = featureRecord.properties.latLngs;
+      hint = "latlngs";
+    }
+
+    const clean: [number, number][] = [];
+    for (const item of rawList) {
+      const pair = ensureLatLngPair(item, hint);
+      if (pair) clean.push(pair);
+    }
+
+    return clean;
+  };
+
+  const ensureLatLngPair = (pt: unknown, sourceHint: "geojson" | "latlngs"): [number, number] | null => {
+    if (pt && typeof pt === "object" && !Array.isArray(pt)) {
+      const obj = pt as { lat?: number; latitude?: number; lng?: number; longitude?: number };
+      const valLat = Number(obj.lat ?? obj.latitude);
+      const valLng = Number(obj.lng ?? obj.longitude);
+      if (!isNaN(valLat) && !isNaN(valLng)) {
+        return [valLat, valLng];
+      }
+    }
+
+    if (Array.isArray(pt) && pt.length >= 2) {
+      const v0 = Number(pt[0]);
+      const v1 = Number(pt[1]);
+      if (isNaN(v0) || isNaN(v1)) return null;
+
+      if (Math.abs(v0) > 90 && Math.abs(v1) <= 90) return [v1, v0];
+      if (Math.abs(v1) > 90 && Math.abs(v0) <= 90) return [v0, v1];
+
+      if (sourceHint === "geojson") {
+        return [v1, v0];
+      } else {
+        return [v0, v1];
+      }
+    }
+
+    return null;
+  };
+
+  const handleFeaturesChanged = (updatedFeatures: MapFeatureExportData[]) => {
+    setMapFeatures(updatedFeatures);
+    setSaveStatus("unsaved");
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveFeaturesToCloud(updatedFeatures);
+    }, 1000);
+  };
+
+  const saveFeaturesToCloud = async (featuresToSave: MapFeatureExportData[]) => {
+    if (!project || projectId.startsWith("demo-proj") || loading) {
+      setSaveStatus("synced");
+      return;
+    }
+
+    try {
+      setSaveStatus("saving");
+
+      const idsToDelete = [...new Set(deletedFeatureIdsRef.current)];
+      if (idsToDelete.length > 0) {
+        await supabase.from("map_features").delete().in("id", idsToDelete);
+        deletedFeatureIdsRef.current = [];
+      }
+
+      if (featuresToSave.length > 0) {
+        const payload = featuresToSave.map((f) => {
+          let geometryObj: unknown;
+          if (f.type === "Polygon" || f.type === "Rectangle") {
+            const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
+            if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
+              coords.push(coords[0]);
+            }
+            geometryObj = { type: "Polygon", coordinates: [coords] };
+          } else if (f.type === "Polyline") {
+            geometryObj = { type: "LineString", coordinates: f.latLngs.map(([lat, lng]) => [lng, lat]) };
+          } else {
+            const pt = f.latLngs[0] || [0, 0];
+            geometryObj = { type: "Point", coordinates: [pt[1], pt[0]] };
+          }
+
+          const isUuid = f.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(f.id);
+          const validId = isUuid ? f.id : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : undefined);
+
+          return {
+            id: validId,
+            project_id: projectId,
+            layer_name: f.name,
+            feature_type: f.type,
+            geometry: geometryObj,
+            properties: {
+              areaSqm: f.areaSqm || null,
+              perimeterMeters: f.perimeterMeters || null,
+              latLngs: f.latLngs.map(([lat, lng]) => ({ lat, lng })),
+              geojson: geometryObj,
+              ...f.properties,
+            },
+          };
+        });
+
+        const { data: upsertedData, error: upsertError } = await supabase
+          .from("map_features")
+          .upsert(payload, { onConflict: "id" })
+          .select("id, properties");
+
+        if (upsertError) {
+          console.error("❌ [Cloud Auto-Save Error] Gagal upsert ke Supabase:", upsertError);
+          setSaveStatus("unsaved");
+          return;
+        }
+
+        if (upsertedData && upsertedData.length > 0) {
+          setMapFeatures((prev) =>
+            prev.map((f, idx) => {
+              const returnedItem = upsertedData[idx];
+              if (returnedItem?.id && (!f.id || f.id.startsWith("f-") || f.id.startsWith("pt-"))) {
+                return { ...f, id: returnedItem.id };
+              }
+              return f;
+            })
+          );
+        }
+      }
+
+      setSaveStatus("synced");
+    } catch (err) {
+      console.error("Cloud Auto-Save error:", err);
+      setSaveStatus("unsaved");
+    }
+  };
+
+  const handleInviteMember = async (email: string, role: UserRole): Promise<boolean> => {
+    if (projectId.startsWith("demo-proj")) {
+      setMembers([...members, { id: `mem-${Date.now()}`, email, full_name: email, role }]);
+      return true;
+    }
+
+    try {
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .single();
+
+      if (!targetProfile) return false;
+
+      const { error } = await supabase.from("project_members").insert({
+        project_id: projectId,
+        user_id: targetProfile.id,
+        role,
+      });
+
+      if (error) return false;
+      fetchProjectData();
+      return true;
+    } catch (err) {
+      console.error("Invite error:", err);
+      return false;
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (projectId.startsWith("demo-proj")) {
+      setMembers(members.filter((m) => m.id !== memberId));
+      return;
+    }
+
+    try {
+      await supabase.from("project_members").delete().eq("id", memberId);
+      setMembers(members.filter((m) => m.id !== memberId));
+    } catch (err) {
+      console.error("Remove member error:", err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full bg-slate-950 flex items-center justify-center text-slate-300 text-sm">
+        <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-500" />
+        Memuat Proyek Pemetaan Spasial...
+      </div>
+    );
+  }
+
+  const geoJsonData: FeatureCollection = {
+    type: "FeatureCollection",
+    features: mapFeatures.map((f) => {
+      let geometry: unknown;
+      const typeLower = (f.type || "").toString().toLowerCase();
+
+      if (typeLower.includes("polygon") || typeLower.includes("rect")) {
+        const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
+        if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
+          coords.push(coords[0]);
+        }
+        geometry = { type: "Polygon", coordinates: [coords] };
+      } else if (typeLower.includes("line") || typeLower.includes("path") || typeLower.includes("string")) {
+        geometry = { type: "LineString", coordinates: f.latLngs.map(([lat, lng]) => [lng, lat]) };
+      } else {
+        const pt = f.latLngs[0] || [0, 0];
+        geometry = { type: "Point", coordinates: [pt[1], pt[0]] };
+      }
+
+      return {
+        type: "Feature",
+        geometry: geometry as any,
+        properties: {
+          id: f.id,
+          name: f.name,
+          description: f.properties?.description || "",
+          color: f.color || "#2563EB",
+          ...f.properties,
+        },
+      };
+    }),
+  };
+
+  const handleZoomToFeature = (featureId: string) => {
+    setZoomToTrigger({ id: featureId, time: Date.now() });
+  };
+
+  const handleDeleteFeature = (featureId: string) => {
+    if (featureId && !featureId.startsWith("f-") && !featureId.startsWith("pt-")) {
+      deletedFeatureIdsRef.current.push(featureId);
+    }
+    const updated = mapFeatures.filter((f) => f.id !== featureId);
+    handleFeaturesChanged(updated);
+  };
+
+  const handleUpdateFeatureProperties = (featureId: string, props: GisFeatureProperties) => {
+    const updated = mapFeatures.map((f) => {
+      if (f.id === featureId) {
+        return {
+          ...f,
+          name: props.name || f.name,
+          color: props.color || f.color,
+          properties: { ...f.properties, ...props },
+        };
+      }
+      return f;
+    });
+    handleFeaturesChanged(updated);
+  };
+
+  const handleAddPoint = (lat: number, lng: number, name: string, description: string, color?: string) => {
+    const newPt: MapFeatureExportData = {
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pt-${Date.now()}`,
+      type: "Marker",
+      name: name || "Titik Pengukuran",
+      latLngs: [[lat, lng]],
+      color: color || "#2563EB",
+      properties: { description },
+    };
+    handleFeaturesChanged([...mapFeatures, newPt]);
+  };
+
+  const handleUpdateGeoJSON = (newGeoJson: FeatureCollection) => {
+    const converted: MapFeatureExportData[] = (newGeoJson.features || [])
+      .filter((feat) => feat && feat.geometry)
+      .map((feat, idx) => {
+        const props = (feat.properties || {}) as GisFeatureProperties;
+        const type = (feat.geometry?.type || "Point") as string;
+        let latLngs: [number, number][] = [];
+
+        if (type === "Polygon") {
+          const ring = (feat.geometry as unknown as { coordinates: number[][][] }).coordinates[0] || [];
+          latLngs = ring.map((pt) => ensureLatLngPair(pt, "geojson")).filter(Boolean) as [number, number][];
+        } else if (type === "LineString") {
+          const coords = (feat.geometry as unknown as { coordinates: number[][] }).coordinates || [];
+          latLngs = coords.map((pt) => ensureLatLngPair(pt, "geojson")).filter(Boolean) as [number, number][];
+        } else if (type === "Point") {
+          const pt = (feat.geometry as unknown as { coordinates: number[] }).coordinates || [0, 0];
+          const pair = ensureLatLngPair(pt, "geojson");
+          latLngs = pair ? [pair] : [];
+        }
+
+        const existing = mapFeatures.find((f) => f.id === props.id);
+
+        const assignedId = (props.id && props.id !== "undefined")
+          ? props.id
+          : existing?.id || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `f-${idx}-${Date.now()}`);
+
+        return {
+          id: assignedId,
+          type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
+          name: props.name || existing?.name || `Geometri ${idx + 1}`,
+          latLngs: latLngs.length > 0 ? latLngs : (existing?.latLngs || []),
+          color: props.color || existing?.color || "#2563EB",
+          properties: { ...existing?.properties, ...props },
+        };
+      });
+
+    const newIds = new Set(converted.map((c) => c.id));
+    mapFeatures.forEach((oldF) => {
+      if (oldF.id && !newIds.has(oldF.id)) {
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(oldF.id)) {
+          deletedFeatureIdsRef.current.push(oldF.id);
+        }
+      }
+    });
+
+    handleFeaturesChanged(converted);
+  };
+
+  const isReadOnly = currentRole === "viewer";
+
+  return (
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-slate-950 font-sans">
+      {/* Top Navbar */}
+      <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="text-slate-400 hover:text-white transition-colors" title="Kembali ke Dashboard">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div className="h-4 w-px bg-slate-800" />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`h-8 w-8 text-slate-300 hover:text-white ${isSidebarOpen ? "bg-slate-800 text-blue-400" : ""}`}
+            title="Buka/Tutup Sidebar Panel"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <h1 className="font-bold text-sm text-white">{project?.title || "Proyek Pemetaan"}</h1>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                currentRole === "owner"
+                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  : currentRole === "editor"
+                  ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                  : "bg-slate-700 text-slate-300"
+              }`}
+            >
+              Role: {currentRole}
+            </span>
+          </div>
+        </div>
+
+        {/* Status Cloud & Action Buttons */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+            {saveStatus === "saving" ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                <span>Menyimpan ke Cloud...</span>
+              </>
+            ) : saveStatus === "synced" ? (
+              <>
+                <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400">Tersimpan di Cloud</span>
+              </>
+            ) : (
+              <>
+                <CloudOff className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-amber-400">Belum Tersimpan</span>
+              </>
+            )}
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsShareOpen(true)}
+            className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-white text-xs h-8"
+          >
+            <Share2 className="w-3.5 h-3.5 mr-1.5 text-blue-400" /> Kolaborasi Tim
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setIsExportOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 font-semibold"
+          >
+            <Download className="w-3.5 h-3.5 mr-1.5" /> Ekspor PDF &amp; Data
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content Body: Sidebar + Map Canvas Container */}
+      <div className="flex-1 relative overflow-hidden flex flex-row">
+        {/* Sidebar Panel */}
+        {isSidebarOpen && (
+          <EditorSidebar
+            geoJsonData={geoJsonData}
+            onUpdateGeoJSON={handleUpdateGeoJSON}
+            coordinateMode={coordinateMode}
+            onZoomToFeature={handleZoomToFeature}
+            onDeleteFeature={handleDeleteFeature}
+            onUpdateFeatureProperties={handleUpdateFeatureProperties}
+            onAddPoint={handleAddPoint}
+            selectedPdfFeatureId={selectedPdfFeatureId}
+            onSelectPdfFeature={setSelectedPdfFeatureId}
+          />
+        )}
+
+        {/* Map Canvas */}
+        <div className="flex-1 relative overflow-hidden h-full">
+          <DynamicMapCanvas
+            geoJsonData={geoJsonData}
+            onGeoJsonChange={handleUpdateGeoJSON}
+            coordinateMode={coordinateMode}
+            onCoordinateModeChange={setCoordinateMode}
+            zoomToTrigger={zoomToTrigger}
+            selectedPdfFeatureId={selectedPdfFeatureId}
+            onSelectPdfFeature={setSelectedPdfFeatureId}
+            readOnly={isReadOnly}
+          />
+        </div>
+      </div>
+
+      {/* Modals */}
+      <ExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        projectTitle={project?.title || "GeoVertex_Map"}
+        features={mapFeatures}
+        selectedPdfFeatureId={selectedPdfFeatureId}
+        onSelectPdfFeature={setSelectedPdfFeatureId}
+      />
+
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        projectTitle={project?.title || "GeoVertex Project"}
+        members={members}
+        currentRole={currentRole}
+        onInviteMember={handleInviteMember}
+        onRemoveMember={handleRemoveMember}
+      />
+    </div>
+  );
+}

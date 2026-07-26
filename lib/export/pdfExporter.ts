@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { latLngToUtmWithZone, getUtmZoneFromLongitude, getLatitudeBand } from "../utm";
+import { latLngToUtmWithZone, getUtmZoneFromLongitude, getLatitudeBand } from "../gis";
 
 export type PaperSize = "a4";
 export type Orientation = "portrait" | "landscape";
@@ -24,7 +24,7 @@ export interface MapFeatureExportData {
   type: "Polygon" | "Polyline" | "Marker" | "Circle" | "Rectangle";
   name: string;
   latLngs: [number, number][]; // Array of [lat, lng]
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   areaSqm?: number;
   perimeterMeters?: number;
   color?: string;

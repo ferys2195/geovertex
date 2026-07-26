@@ -8,7 +8,7 @@ export interface GisFeatureProperties {
   description?: string;
   color?: string; // Hex color for custom rendering
   gpxType?: 'waypoint' | 'track' | 'route';
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface MapSample {

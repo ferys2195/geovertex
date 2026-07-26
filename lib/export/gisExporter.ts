@@ -1,5 +1,6 @@
+import type { Geometry } from "geojson";
 import { MapFeatureExportData } from "./pdfExporter";
-import { latLngToUtmWithZone, getUtmZoneFromLongitude } from "../utm";
+import { latLngToUtmWithZone, getUtmZoneFromLongitude } from "../gis";
 
 // 1. GeoJSON Exporter
 export const exportToGeoJSON = (features: MapFeatureExportData[], title = "GeoVertex_Export"): void => {
@@ -7,7 +8,7 @@ export const exportToGeoJSON = (features: MapFeatureExportData[], title = "GeoVe
     type: "FeatureCollection",
     name: title,
     features: features.map((feat) => {
-      let geometry: any;
+      let geometry: Geometry;
       if (feat.type === "Polygon" || feat.type === "Rectangle") {
         const coords = feat.latLngs.map(([lat, lng]) => [lng, lat]);
         // Close polygon ring if needed
