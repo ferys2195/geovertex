@@ -134,7 +134,7 @@ export default function Sidebar({
   }, 0);
 
   return (
-    <aside id="sidebar-container" className="w-full lg:w-[480px] h-full bg-background border-r flex flex-col z-40 shrink-0 relative font-sans">
+    <aside id="sidebar-container" className="w-full lg:w-120 h-full bg-background border-r flex flex-col z-40 shrink-0 relative font-sans">
       {/* Header Bar */}
       <div className="bg-muted/50 px-4 py-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">

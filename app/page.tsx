@@ -29,7 +29,7 @@ import { FeatureCollection } from "geojson";
 const DynamicMapContainer = dynamic(() => import("@/components/MapContainer"), {
   ssr: false,
   loading: () => (
-    <div className="h-[480px] w-full rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-center text-slate-400 text-xs">
+    <div className="h-120 w-full rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-center text-slate-400 text-xs">
       Loading Live Interactive GIS Sandbox...
     </div>
   ),
@@ -45,7 +45,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
       {/* Background Gradients & Glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-250 h-125 bg-linear-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-3xl pointer-events-none" />
       <div className="absolute top-96 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Bar */}
@@ -100,7 +100,7 @@ export default function LandingPage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight max-w-5xl mx-auto leading-[1.1]">
-          Digitasi Peta Lahan & Edit Vertex Presisi <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-emerald-400 to-indigo-400">di Cloud</span>
+          Digitasi Peta Lahan & Edit Vertex Presisi <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-emerald-400 to-indigo-400">di Cloud</span>
         </h1>
 
         <p className="text-base sm:text-xl text-slate-400 max-w-3xl mx-auto font-normal leading-relaxed">
@@ -148,7 +148,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="h-[520px] rounded-2xl overflow-hidden border border-slate-800/80 shadow-inner relative">
+          <div className="h-130 rounded-2xl overflow-hidden border border-slate-800/80 shadow-inner relative">
             <DynamicMapContainer
               geoJsonData={sandboxGeoJson}
               onGeoJsonChange={setSandboxGeoJson}
@@ -306,7 +306,7 @@ export default function LandingPage() {
           </div>
 
           {/* Pro Tier */}
-          <div className="bg-gradient-to-b from-blue-900/40 to-slate-900 border-2 border-blue-500/50 rounded-3xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative">
+          <div className="bg-linear-to-b from-blue-900/40 to-slate-900 border-2 border-blue-500/50 rounded-3xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative">
             <div className="absolute -top-3.5 right-8 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-md">
               Direkomendasikan
             </div>

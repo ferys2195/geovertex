@@ -238,7 +238,7 @@ export default function DashboardPage() {
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Banner Tier */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 rounded-2xl bg-gradient-to-r from-blue-900/40 via-slate-900 to-emerald-900/30 border border-slate-800 shadow-xl gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 rounded-2xl bg-linear-to-r from-blue-900/40 via-slate-900 to-emerald-900/30 border border-slate-800 shadow-xl gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-white">Dashboard Proyek Pemetaan Spasial</span>
@@ -331,7 +331,7 @@ export default function DashboardPage() {
                     <h3 className="font-bold text-base text-white group-hover:text-blue-400 transition-colors line-clamp-1">
                       {project.title}
                     </h3>
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-1 min-h-[32px]">
+                    <p className="text-xs text-slate-400 line-clamp-2 mt-1 min-h-8">
                       {project.description || "Tidak ada deskripsi proyek."}
                     </p>
                   </div>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
 
       {/* Create Project Modal */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[480px] bg-slate-900 border-slate-800 text-slate-100">
+        <DialogContent className="sm:max-w-120 bg-slate-900 border-slate-800 text-slate-100">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Plus className="w-5 h-5 text-blue-400" /> Buat Proyek Pemetaan Baru

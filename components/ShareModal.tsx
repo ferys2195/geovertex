@@ -74,7 +74,7 @@ export function ShareModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background border-border text-foreground shadow-2xl">
+      <DialogContent className="sm:max-w-125 bg-background border-border text-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <Users className="w-5 h-5 text-primary" />
@@ -144,7 +144,7 @@ export function ShareModal({
         {/* Members List */}
         <div className="space-y-2 mt-2">
           <label className="block text-xs font-semibold text-muted-foreground">Daftar Anggota Proyek ({members.length})</label>
-          <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
+          <div className="max-h-55 overflow-y-auto space-y-2 pr-1">
             {members.map((member) => (
               <div
                 key={member.id}

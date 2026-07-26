@@ -239,7 +239,7 @@ export default function MapContainer({
         const labelIcon = L.divIcon({
           html: `
             <div class="flex items-center justify-center pointer-events-none" style="transform: translate(-50%, -50%) rotate(${angle}deg);">
-              <div class="text-[11px] font-extrabold whitespace-nowrap z-[1200] leading-none" style="color: #000000; text-shadow: 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff;">
+              <div class="text-[11px] font-extrabold whitespace-nowrap z-1200 leading-none" style="color: #000000; text-shadow: 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff;">
                 ${formatted}
               </div>
             </div>
@@ -366,7 +366,7 @@ export default function MapContainer({
         const labelIcon = L.divIcon({
           html: `
             <div class="flex items-center justify-center pointer-events-none" style="transform: translate(-50%, -50%) rotate(${angle}deg);">
-              <div class="text-[10px] font-extrabold whitespace-nowrap z-[1100] leading-none" style="color: #000000; text-shadow: 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff;">
+              <div class="text-[10px] font-extrabold whitespace-nowrap z-1100 leading-none" style="color: #000000; text-shadow: 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff, 0px 0px 3px #ffffff;">
                 ${formatted}
               </div>
             </div>
@@ -544,7 +544,7 @@ export default function MapContainer({
           const area = calculatePolygonArea(coords);
           const perimeter = calculatePolygonPerimeter(coords);
           tooltipHtml = `
-            <div class="p-2 text-xs font-sans min-w-[160px]">
+            <div class="p-2 text-xs font-sans min-w-40">
               <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
               ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
               <hr class="my-1.5 border-zinc-200" />
@@ -558,7 +558,7 @@ export default function MapContainer({
           const coords = pts.map((p) => [p.lng, p.lat]);
           const length = calculateLineLength(coords);
           tooltipHtml = `
-            <div class="p-2 text-xs font-sans min-w-[160px]">
+            <div class="p-2 text-xs font-sans min-w-40">
               <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
               ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
               <hr class="my-1.5 border-zinc-200" />
@@ -568,7 +568,7 @@ export default function MapContainer({
         } else if (layer instanceof L.Marker || currentGeo?.geometry?.type === 'Point') {
           const pt = layer.getLatLng ? layer.getLatLng() : L.latLng(0, 0);
           tooltipHtml = `
-            <div class="p-2 text-xs font-sans min-w-[160px]">
+            <div class="p-2 text-xs font-sans min-w-40">
               <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
               ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
               <hr class="my-1.5 border-zinc-200" />
@@ -999,7 +999,7 @@ export default function MapContainer({
         />
 
         {/* BASEMAP LAYER SWITCHER FLOATING CONTROL */}
-        <div className="absolute top-4 right-4 z-[1000]">
+        <div className="absolute top-4 right-4 z-1000">
           <div className="relative">
             <button
               onClick={() => setShowLayerMenu(!showLayerMenu)}
@@ -1011,7 +1011,7 @@ export default function MapContainer({
             </button>
 
             {showLayerMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white/98 backdrop-blur-md rounded-xl border border-zinc-200/90 shadow-xl p-1.5 z-[1001] space-y-1">
+              <div className="absolute right-0 mt-2 w-56 bg-white/98 backdrop-blur-md rounded-xl border border-zinc-200/90 shadow-xl p-1.5 z-1001 space-y-1">
                 <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">
                   Pilih Tile Layer
                 </div>
@@ -1035,7 +1035,7 @@ export default function MapContainer({
         </div>
 
         {/* UTM CONVERTER TOOLBAR BUTTON */}
-        <div className="absolute top-4 left-14 z-[1000] flex items-center gap-2">
+        <div className="absolute top-4 left-14 z-1000 flex items-center gap-2">
           <button
             onClick={() => setIsUtmDialogOpen(true)}
             className="bg-white/95 backdrop-blur-xs hover:bg-white text-slate-900 px-3 py-1.5 rounded-md border border-slate-200 shadow-md font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -1061,7 +1061,7 @@ export default function MapContainer({
         {(() => {
           const currentHover = hoverCoords || internalHoverCoords;
           return (
-            <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px]">
+            <div className="absolute bottom-4 left-4 z-1000 bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px]">
               <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
               <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
               {currentHover ? (
@@ -1105,7 +1105,7 @@ export default function MapContainer({
         />
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-48 z-[9999]">
+      <ContextMenuContent className="w-48 z-9999">
         <ContextMenuItem onClick={handleCopyCoordinates} className="cursor-pointer flex items-center gap-2">
           <Copy className="w-4 h-4 text-zinc-500" />
           <span className="font-medium">Salin Koordinat</span>

@@ -90,7 +90,7 @@ export function UtmConverterDialog({ isOpen, onClose, onAddPoint }: UtmConverter
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-slate-900 border-slate-800 text-slate-100 shadow-2xl">
+      <DialogContent className="sm:max-w-125 bg-slate-900 border-slate-800 text-slate-100 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
             <Calculator className="w-5 h-5 text-blue-400" />

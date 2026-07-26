@@ -59,7 +59,7 @@ export function ExportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[540px] bg-background border-border text-foreground shadow-2xl">
+      <DialogContent className="sm:max-w-135 bg-background border-border text-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <Download className="w-5 h-5 text-primary" />
