@@ -50,6 +50,51 @@ CREATE TABLE IF NOT EXISTS public.map_features (
 );
 
 -- =====================================================================
+-- HELPER FUNCTIONS FOR RLS (PREVENT INFINITE RECURSION)
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION public.is_project_member(p_project_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM public.project_members 
+    WHERE project_id = p_project_id 
+    AND user_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_project_member_role(p_project_id UUID, p_user_id UUID)
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT role 
+  FROM public.project_members 
+  WHERE project_id = p_project_id 
+  AND user_id = p_user_id
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_project_owner(p_project_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM public.projects 
+    WHERE id = p_project_id 
+    AND owner_id = p_user_id
+  );
+$$;
+
+-- =====================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- =====================================================================
 
@@ -75,11 +120,7 @@ CREATE POLICY "Users can view projects they own or belong to"
   TO authenticated
   USING (
     auth.uid() = owner_id OR 
-    EXISTS (
-      SELECT 1 FROM public.project_members 
-      WHERE project_members.project_id = projects.id 
-      AND project_members.user_id = auth.uid()
-    )
+    public.is_project_member(id, auth.uid())
   );
 
 CREATE POLICY "Users can create projects if under quota"
@@ -92,12 +133,7 @@ CREATE POLICY "Project owners and editors can update projects"
   TO authenticated
   USING (
     auth.uid() = owner_id OR 
-    EXISTS (
-      SELECT 1 FROM public.project_members 
-      WHERE project_members.project_id = projects.id 
-      AND project_members.user_id = auth.uid()
-      AND project_members.role IN ('owner', 'editor')
-    )
+    public.get_project_member_role(id, auth.uid()) IN ('owner', 'editor')
   );
 
 CREATE POLICY "Project owners can delete projects"
@@ -110,28 +146,15 @@ CREATE POLICY "Project members can view fellow project members"
   ON public.project_members FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = project_members.project_id 
-      AND (
-        projects.owner_id = auth.uid() OR 
-        EXISTS (
-          SELECT 1 FROM public.project_members pm 
-          WHERE pm.project_id = projects.id AND pm.user_id = auth.uid()
-        )
-      )
-    )
+    public.is_project_owner(project_id, auth.uid()) OR
+    public.is_project_member(project_id, auth.uid())
   );
 
 CREATE POLICY "Project owners can manage team members"
   ON public.project_members FOR ALL
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = project_members.project_id 
-      AND projects.owner_id = auth.uid()
-    )
+    public.is_project_owner(project_id, auth.uid())
   );
 
 -- Map Features Policies
@@ -139,75 +162,32 @@ CREATE POLICY "Users can view features of accessible projects"
   ON public.map_features FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = map_features.project_id 
-      AND (
-        projects.owner_id = auth.uid() OR 
-        EXISTS (
-          SELECT 1 FROM public.project_members 
-          WHERE project_members.project_id = projects.id 
-          AND project_members.user_id = auth.uid()
-        )
-      )
-    )
+    public.is_project_owner(project_id, auth.uid()) OR
+    public.is_project_member(project_id, auth.uid())
   );
 
 CREATE POLICY "Owners and editors can insert map features"
   ON public.map_features FOR INSERT
   TO authenticated
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = map_features.project_id 
-      AND (
-        projects.owner_id = auth.uid() OR 
-        EXISTS (
-          SELECT 1 FROM public.project_members 
-          WHERE project_members.project_id = projects.id 
-          AND project_members.user_id = auth.uid() 
-          AND project_members.role IN ('owner', 'editor')
-        )
-      )
-    )
+    public.is_project_owner(project_id, auth.uid()) OR
+    public.get_project_member_role(project_id, auth.uid()) IN ('owner', 'editor')
   );
 
 CREATE POLICY "Owners and editors can update map features"
   ON public.map_features FOR UPDATE
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = map_features.project_id 
-      AND (
-        projects.owner_id = auth.uid() OR 
-        EXISTS (
-          SELECT 1 FROM public.project_members 
-          WHERE project_members.project_id = projects.id 
-          AND project_members.user_id = auth.uid() 
-          AND project_members.role IN ('owner', 'editor')
-        )
-      )
-    )
+    public.is_project_owner(project_id, auth.uid()) OR
+    public.get_project_member_role(project_id, auth.uid()) IN ('owner', 'editor')
   );
 
 CREATE POLICY "Owners and editors can delete map features"
   ON public.map_features FOR DELETE
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = map_features.project_id 
-      AND (
-        projects.owner_id = auth.uid() OR 
-        EXISTS (
-          SELECT 1 FROM public.project_members 
-          WHERE project_members.project_id = projects.id 
-          AND project_members.user_id = auth.uid() 
-          AND project_members.role IN ('owner', 'editor')
-        )
-      )
-    )
+    public.is_project_owner(project_id, auth.uid()) OR
+    public.get_project_member_role(project_id, auth.uid()) IN ('owner', 'editor')
   );
 
 -- =====================================================================

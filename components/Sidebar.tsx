@@ -323,7 +323,7 @@ export default function Sidebar({
                           </div>
                         </Card>
                       ) : (
-                        <div>
+                        <div onClick={() => onZoomToFeature(featureId)} className="cursor-pointer group">
                           {/* Header Card */}
                           <div className="flex items-start justify-between">
                             <div className="space-y-0.5">

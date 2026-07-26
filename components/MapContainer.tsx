@@ -95,6 +95,7 @@ export default function MapContainer({
   const [isUtmDialogOpen, setIsUtmDialogOpen] = useState<boolean>(false);
   const [internalHoverCoords, setInternalHoverCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [activeCoordMode, setActiveCoordMode] = useState<CoordinateMode>(coordinateMode);
+  const [isMapReady, setIsMapReady] = useState<boolean>(false);
 
   useEffect(() => {
     setActiveCoordMode(coordinateMode);
@@ -121,6 +122,7 @@ export default function MapContainer({
   // This avoids re-drawing loops during user interaction on the canvas.
   const mapGeoJsonStrRef = useRef<string>('');
   const isInternalUserActionRef = useRef<boolean>(false);
+  const hasInitialAutoFitRef = useRef<boolean>(false);
   const syncMapToStateRef = useRef<() => void>(() => {});
   const bindLayerInteractiveListenersRef = useRef<(layer: any, props?: any) => void>(() => {});
 
@@ -446,6 +448,8 @@ export default function MapContainer({
     // Custom text translations for Geoman (Bahasa Indonesia)
     map.pm.setLang('en'); // Defaults, we can write custom tooltips or stick to standard English icons which are highly understood.
 
+    setIsMapReady(true);
+
     // 3. Event Listeners for Map Drawing
     const syncMapToState = () => {
       if (!geojsonGroupRef.current) return;
@@ -468,13 +472,18 @@ export default function MapContainer({
         }
 
         if (geojson) {
+          // Skip outer FeatureCollection wrapper layers if any group layer responds to toGeoJSON()
+          if (geojson.type === 'FeatureCollection') {
+            return;
+          }
+
           geojson.properties = geojson.properties || {};
           
           // Re-embed ID
           if (layer._pm_temp_id) {
             geojson.properties.id = layer._pm_temp_id;
           } else {
-            layer._pm_temp_id = Math.random().toString(36).substring(2, 11);
+            layer._pm_temp_id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11);
             geojson.properties.id = layer._pm_temp_id;
           }
 
@@ -495,6 +504,8 @@ export default function MapContainer({
         features,
       };
 
+      console.log(`✏️ [Geoman Canvas Sync] Total ${features.length} geometri aktif di peta:`, updatedCollection);
+
       const serialized = JSON.stringify(updatedCollection);
       mapGeoJsonStrRef.current = serialized;
       onGeoJsonChange(updatedCollection);
@@ -506,7 +517,7 @@ export default function MapContainer({
       if (!layer) return;
 
       if (!layer._pm_temp_id) {
-        layer._pm_temp_id = props.id || Math.random().toString(36).substring(2, 11);
+        layer._pm_temp_id = props.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11));
       }
 
       const updatePopupContent = () => {
@@ -605,8 +616,10 @@ export default function MapContainer({
     map.on('pm:create', (e: any) => {
       const layer = e.layer;
       
-      // Auto assign unique Geoman temp ID
-      layer._pm_temp_id = Math.random().toString(36).substring(2, 11);
+      // Auto assign unique Geoman temp ID (UUID format)
+      layer._pm_temp_id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11);
+      
+      console.log(`🎨 [Geoman Drawing Finish] Bentuk: ${e.shape}, Layer ID: ${layer._pm_temp_id}`, layer.toGeoJSON ? layer.toGeoJSON() : layer);
       
       // Setup initial styles if any
       if (layer instanceof L.Path) {
@@ -734,21 +747,26 @@ export default function MapContainer({
   useEffect(() => {
     const map = mapInstanceRef.current;
     const group = geojsonGroupRef.current;
+
+    if (!isMapReady) return;
     if (!map || !group) return;
+
+    const currentExternalStr = JSON.stringify(geoJsonData);
 
     // If change was triggered internally by user drawing/editing on canvas, skip clearing layers!
     if (isInternalUserActionRef.current) {
       isInternalUserActionRef.current = false;
-      mapGeoJsonStrRef.current = JSON.stringify(geoJsonData);
+      mapGeoJsonStrRef.current = currentExternalStr;
       return;
     }
 
-    const currentExternalStr = JSON.stringify(geoJsonData);
-    
     // Skip if identical to what's already on the map to prevent focus loss & infinite loops
     if (currentExternalStr === mapGeoJsonStrRef.current) {
       return;
     }
+
+    const featureCount = geoJsonData?.features?.length ?? 0;
+    console.log(`🗺️ [MapContainer Render] geoJsonData berubah, ${featureCount} fitur akan di-render ke canvas:`, geoJsonData);
 
     // Update track reference
     mapGeoJsonStrRef.current = currentExternalStr;
@@ -756,57 +774,83 @@ export default function MapContainer({
     // Clear and Redraw
     group.clearLayers();
 
-    if (geoJsonData && geoJsonData.features) {
-      const geojsonLayer = L.geoJSON(geoJsonData, {
-        style: (feature: any) => {
-          const color = feature.properties?.color || '#3b82f6'; // default blue
-          return {
-            color: color,
-            fillColor: color,
-            fillOpacity: 0.3,
-            weight: 3,
-          };
-        },
-        pointToLayer: (feature: any, latlng: L.LatLng) => {
-          const color = feature.properties?.color || '#3b82f6';
-          
-          // Generate a beautifully styled SVG marker wrapper
-          const pinSvgHtml = `
-            <svg class="w-8 h-8 drop-shadow-md" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" 
-                fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
-            </svg>
-          `;
-          
-          const icon = L.divIcon({
-            html: pinSvgHtml,
-            className: 'custom-pin-marker',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-          });
+    if (geoJsonData && geoJsonData.features && featureCount > 0) {
+      try {
+        const geojsonLayer = L.geoJSON(geoJsonData, {
+          style: (feature: any) => {
+            const color = feature.properties?.color || '#3b82f6'; // default blue
+            return {
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.3,
+              weight: 3,
+            };
+          },
+          pointToLayer: (feature: any, latlng: L.LatLng) => {
+            const color = feature.properties?.color || '#3b82f6';
+            
+            const pinSvgHtml = `
+              <svg class="w-8 h-8 drop-shadow-md" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" 
+                  fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
+              </svg>
+            `;
+            
+            const icon = L.divIcon({
+              html: pinSvgHtml,
+              className: 'custom-pin-marker',
+              iconSize: [32, 32],
+              iconAnchor: [16, 32],
+            });
 
-          return L.marker(latlng, { icon });
-        },
-        onEachFeature: (feature: any, layer: any) => {
-          bindLayerInteractiveListenersRef.current(layer, feature.properties || {});
+            return L.marker(latlng, { icon });
+          },
+          onEachFeature: (feature: any, layer: any) => {
+            bindLayerInteractiveListenersRef.current(layer, feature.properties || {});
 
-          layer.on('pm:edit', () => syncMapToStateRef.current());
-          layer.on('pm:dragend', () => syncMapToStateRef.current());
-          layer.on('pm:remove', () => {
-            geojsonGroupRef.current?.removeLayer(layer);
-            syncMapToStateRef.current();
-          });
+            layer.on('pm:edit', () => syncMapToStateRef.current());
+            layer.on('pm:dragend', () => syncMapToStateRef.current());
+            layer.on('pm:remove', () => {
+              geojsonGroupRef.current?.removeLayer(layer);
+              syncMapToStateRef.current();
+            });
+          }
+        });
+
+        let layerCount = 0;
+        geojsonLayer.eachLayer((layer: any) => {
+          if (!group.hasLayer(layer)) {
+            group.addLayer(layer);
+            layerCount++;
+          }
+        });
+
+        console.log(`✅ [MapContainer Render] Berhasil menambahkan ${layerCount} layer ke canvas map.`);
+
+        // Force Leaflet to recalculate container dimensions immediately
+        map.invalidateSize();
+
+        // AUTO-FIT BOUNDS on data load from cloud / Supabase
+        if (group.getLayers().length > 0) {
+          try {
+            const bounds = group.getBounds();
+            if (bounds && bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
+              console.log(`🔍 [MapContainer] fitBounds applied:`, bounds.toBBoxString());
+            } else {
+              console.warn('⚠️ [MapContainer] bounds tidak valid, tidak bisa fitBounds');
+            }
+          } catch (err) {
+            console.error("Auto fit bounds error:", err);
+          }
         }
-      });
-
-      // Add to map viewport as flat layers to prevent Geoman nesting issues
-      geojsonLayer.eachLayer((layer: any) => {
-        group.addLayer(layer);
-      });
+      } catch (err) {
+        console.error('❌ [MapContainer Render Error] L.geoJSON gagal:', err, geoJsonData);
+      }
     }
-  }, [geoJsonData]);
+  }, [geoJsonData, isMapReady]);
 
-  // 2. Respond to sidebar center zoom trigger (Eye icon klik)
+  // 2. Respond to sidebar center zoom trigger (Eye icon / Sidebar click)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !zoomToTrigger) return;
@@ -830,12 +874,15 @@ export default function MapContainer({
 
     if (targetLayer) {
       setSelectedFeatureId(zoomToTrigger.id);
-      if (targetLayer instanceof L.Marker) {
-        map.setView(targetLayer.getLatLng(), 15, { animate: true });
-        targetLayer.openPopup();
-      } else if (targetLayer instanceof L.Polyline || targetLayer instanceof L.Polygon) {
-        map.fitBounds(targetLayer.getBounds(), { padding: [50, 50], maxZoom: 15, animate: true });
-        targetLayer.openPopup();
+      if (typeof targetLayer.getLatLng === 'function' && !(targetLayer instanceof L.Polygon || targetLayer instanceof L.Polyline)) {
+        map.setView(targetLayer.getLatLng(), 16, { animate: true });
+        targetLayer.openPopup?.();
+      } else if (typeof targetLayer.getBounds === 'function') {
+        const bounds = targetLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
+          targetLayer.openPopup?.();
+        }
       }
     }
   }, [zoomToTrigger]);

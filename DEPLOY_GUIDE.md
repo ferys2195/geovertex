@@ -27,9 +27,10 @@ Sebelum memulai, pastikan Anda telah menyiapkan akun-akun berikut:
    - Membuat tabel `profiles`, `projects`, `project_members`, dan `map_features`.
    - Mengkonfigurasi keamanan **Row Level Security (RLS)**.
    - Membuat trigger otomatis registrasi profil pengguna baru.
-5. Buka menu **Project Settings -> API**:
-   - Salin **Project URL** (contoh: `https://xyzcompany.supabase.co`).
-   - Salin **anon public key** (contoh: `eyJhbGciOi...`).
+5. Buka menu **Project Settings -> API** (ikon gerigi ⚙️ di pojok kiri bawah -> **API** / **Data API**):
+   - Salin **Project URL** (contoh: `https://<project-ref>.supabase.co`).
+     > 💡 *Tips:* Jika tidak melihat Project URL di tab API Keys UI baru, Anda bisa mengambil kode Reference ID dari address bar browser (`https://supabase.com/dashboard/project/<project-ref>/...`) lalu bentuk URL menjadi `https://<project-ref>.supabase.co`.
+   - Salin **Publishable key** (`sb_publishable_...`) yang setara dengan **anon public key** (atau salin dari tab *Legacy anon, service_role API keys* jika menggunakan format lama `eyJhbGci...`).
    *(Simpan kedua nilai ini untuk konfigurasi Environment Variables).*
 
 ---
@@ -84,10 +85,10 @@ Sebelum memulai, pastikan Anda telah menyiapkan akun-akun berikut:
    - **Root Directory**: `./` (Default).
    - Buka bagian **Environment Variables** dan tambahkan variabel berikut:
 
-| Key | Value |
-| :--- | :--- |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://xyzcompany.supabase.co` *(Ganti URL Supabase Anda)* |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOi...` *(Ganti Anon Key Supabase Anda)* |
+| Key | Value | Catatan |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` | Project URL Supabase Anda |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_...` (atau `eyJhbGci...`) | Publishable Key (atau Legacy Anon Key) |
 
 4. Klik tombol **Deploy**.
 5. Tunggu hingga proses build selesai (~1-2 menit). Vercel akan memberikan domain publik (misal: `https://geovertex.vercel.app`).

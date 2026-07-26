@@ -48,6 +48,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedPdfFeatureId, setSelectedPdfFeatureId] = useState<string | null>(null);
+  const deletedFeatureIdsRef = useRef<string[]>([]);
 
   const supabase = createClient();
 
@@ -133,21 +134,46 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       setMembers(mappedMembers);
 
       // Fetch Map Features from Supabase PostGIS
-      const { data: featData } = await supabase
+      const { data: featData, error: featErr } = await supabase
         .from("map_features")
         .select("*")
         .eq("project_id", projectId);
 
+      if (featErr) {
+        console.error("❌ [Supabase Fetch Error] Gagal mengambil data map_features:", featErr);
+      }
+
+      console.log(`📥 [Supabase DB Fetch] Mentah (${featData?.length || 0} baris dari tabel map_features):`, featData);
+
       if (featData) {
-        const mappedFeats: MapFeatureExportData[] = featData.map((f: MapFeatureRecord) => ({
-          id: f.id,
-          type: f.feature_type,
-          name: f.layer_name || "Feature",
-          latLngs: f.geometry?.coordinates ? parseGeoJsonCoords(f.geometry) : [],
-          properties: f.properties || {},
-          areaSqm: f.properties?.areaSqm,
-          perimeterMeters: f.properties?.perimeterMeters,
-        }));
+        const mappedFeats: MapFeatureExportData[] = featData
+          .map((f: MapFeatureRecord) => {
+            const parsedLatLngs = parseGeoJsonCoords(f);
+            console.log(`🔬 [Row Debug] id=${f.id}, feature_type=${f.feature_type}`, {
+              geometry_type: typeof f.geometry,
+              geometry_value: f.geometry,
+              properties_latLngs: f.properties?.latLngs,
+              parsed_latLngs: parsedLatLngs,
+              parsed_count: parsedLatLngs.length,
+            });
+            return {
+              id: f.id,
+              type: f.feature_type as any,
+              name: f.layer_name || "Feature",
+              latLngs: parsedLatLngs,
+              properties: f.properties || {},
+              areaSqm: f.properties?.areaSqm,
+              perimeterMeters: f.properties?.perimeterMeters,
+              color: f.properties?.color || "#2563EB",
+            };
+          })
+          .filter((f) => {
+            const valid = Array.isArray(f.latLngs) && f.latLngs.length > 0;
+            if (!valid) console.warn(`⚠️ [Row Filtered Out] id=${f.id}, latLngs=`, f.latLngs);
+            return valid;
+          });
+
+        console.log(`🗺️ [Map Features Result] Berhasil diproses & disiapkan untuk canvas/sidebar (${mappedFeats.length} geometri):`, mappedFeats);
         setMapFeatures(mappedFeats);
       }
     } catch (err) {
@@ -157,17 +183,272 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const parseGeoJsonCoords = (geometry: any): [number, number][] => {
-    if (!geometry?.coordinates) return [];
-    if (geometry.type === "Polygon") {
-      const ring = geometry.coordinates[0] || [];
-      return ring.map((pt: [number, number]) => [pt[1], pt[0]]);
-    } else if (geometry.type === "LineString") {
-      return geometry.coordinates.map((pt: [number, number]) => [pt[1], pt[0]]);
-    } else if (geometry.type === "Point") {
-      return [[geometry.coordinates[1], geometry.coordinates[0]]];
+  const hexToBytes = (hex: string): Uint8Array => {
+    const cleanHex = hex.trim().replace(/^\\x/i, "").replace(/^0x/i, "");
+    const bytes = new Uint8Array(Math.floor(cleanHex.length / 2));
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = parseInt(cleanHex.substr(i * 2, 2), 16) || 0;
     }
-    return [];
+    return bytes;
+  };
+
+  const parseEwkbHex = (hex: string): { type: string; coordinates: any } | null => {
+    try {
+      const bytes = hexToBytes(hex);
+      if (bytes.length < 5) return null;
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+      let offset = 0;
+      const byteOrder = view.getUint8(offset);
+      offset += 1;
+      if (byteOrder !== 0 && byteOrder !== 1) return null;
+      const littleEndian = byteOrder === 1;
+
+      const rawType = view.getUint32(offset, littleEndian);
+      offset += 4;
+
+      const hasSrid = (rawType & 0x20000000) !== 0;
+      const geomType = rawType & 0xffff;
+
+      if (hasSrid) {
+        offset += 4;
+      }
+
+      if (geomType === 1) { // Point
+        const lng = view.getFloat64(offset, littleEndian);
+        offset += 8;
+        const lat = view.getFloat64(offset, littleEndian);
+        return { type: "Point", coordinates: [lng, lat] };
+      } else if (geomType === 2) { // LineString
+        const numPoints = view.getUint32(offset, littleEndian);
+        offset += 4;
+        const coords: [number, number][] = [];
+        for (let i = 0; i < numPoints; i++) {
+          const lng = view.getFloat64(offset, littleEndian);
+          offset += 8;
+          const lat = view.getFloat64(offset, littleEndian);
+          offset += 8;
+          coords.push([lng, lat]);
+        }
+        return { type: "LineString", coordinates: coords };
+      } else if (geomType === 3) { // Polygon
+        const numRings = view.getUint32(offset, littleEndian);
+        offset += 4;
+        const rings: [number, number][][] = [];
+        for (let r = 0; r < numRings; r++) {
+          const numPoints = view.getUint32(offset, littleEndian);
+          offset += 4;
+          const ring: [number, number][] = [];
+          for (let i = 0; i < numPoints; i++) {
+            const lng = view.getFloat64(offset, littleEndian);
+            offset += 8;
+            const lat = view.getFloat64(offset, littleEndian);
+            offset += 8;
+            ring.push([lng, lat]);
+          }
+          rings.push(ring);
+        }
+        return { type: "Polygon", coordinates: rings };
+      } else if (geomType === 6) { // MultiPolygon
+        const numPolys = view.getUint32(offset, littleEndian);
+        offset += 4;
+        const polys: [number, number][][][] = [];
+        for (let p = 0; p < numPolys; p++) {
+          const subByteOrder = view.getUint8(offset);
+          offset += 1;
+          const subLittle = subByteOrder === 1;
+          const subRawType = view.getUint32(offset, subLittle);
+          offset += 4;
+          if ((subRawType & 0x20000000) !== 0) offset += 4;
+
+          const numRings = view.getUint32(offset, subLittle);
+          offset += 4;
+          const rings: [number, number][][] = [];
+          for (let r = 0; r < numRings; r++) {
+            const numPoints = view.getUint32(offset, subLittle);
+            offset += 4;
+            const ring: [number, number][] = [];
+            for (let i = 0; i < numPoints; i++) {
+              const lng = view.getFloat64(offset, subLittle);
+              offset += 8;
+              const lat = view.getFloat64(offset, subLittle);
+              offset += 8;
+              ring.push([lng, lat]);
+            }
+            rings.push(ring);
+          }
+          polys.push(rings);
+        }
+        return { type: "MultiPolygon", coordinates: polys };
+      }
+    } catch (e) {
+      console.error("EWKB parse error:", e);
+    }
+    return null;
+  };
+
+  const parseWktString = (wkt: string): { type: string; coordinates: any } | null => {
+    try {
+      const clean = wkt.replace(/^SRID=\d+;/i, "").trim();
+      const typeMatch = clean.match(/^(POLYGON|LINESTRING|POINT|MULTIPOLYGON|MULTILINESTRING)/i);
+      if (!typeMatch) return null;
+      const type = typeMatch[1].toUpperCase();
+      const coordStr = clean.slice(clean.indexOf("("));
+
+      if (type === "POLYGON") {
+        const ringMatches = coordStr.match(/\(([^()]+)\)/g);
+        if (!ringMatches) return null;
+        const rings = ringMatches.map((ring) => {
+          const pts = ring.replace(/[()]/g, "").trim().split(",");
+          return pts
+            .map((pt) => {
+              const [lng, lat] = pt.trim().split(/\s+/).map(Number);
+              return [lng, lat] as [number, number];
+            })
+            .filter((pt) => !isNaN(pt[0]) && !isNaN(pt[1]));
+        });
+        return { type: "Polygon", coordinates: rings };
+      } else if (type === "LINESTRING") {
+        const pts = coordStr.replace(/[()]/g, "").trim().split(",");
+        const coords = pts
+          .map((pt) => {
+            const [lng, lat] = pt.trim().split(/\s+/).map(Number);
+            return [lng, lat] as [number, number];
+          })
+          .filter((pt) => !isNaN(pt[0]) && !isNaN(pt[1]));
+        return { type: "LineString", coordinates: coords };
+      } else if (type === "POINT") {
+        const [lng, lat] = coordStr.replace(/[()]/g, "").trim().split(/\s+/).map(Number);
+        if (!isNaN(lng) && !isNaN(lat)) {
+          return { type: "Point", coordinates: [lng, lat] };
+        }
+      }
+    } catch (e) {
+      console.error("WKT parse error:", e);
+    }
+    return null;
+  };
+
+  const ensureLatLngPair = (pt: any, sourceHint?: "geojson" | "latlngs"): [number, number] | null => {
+    let lat: number;
+    let lng: number;
+
+    // 1. Explicit object format { lat, lng } or { latitude, longitude }
+    if (pt && typeof pt === "object" && !Array.isArray(pt)) {
+      const valLat = Number(pt.lat ?? pt.latitude);
+      const valLng = Number(pt.lng ?? pt.longitude);
+      if (!isNaN(valLat) && !isNaN(valLng)) {
+        return [valLat, valLng];
+      }
+    }
+
+    // 2. Array format
+    if (Array.isArray(pt) && pt.length >= 2) {
+      const v0 = Number(pt[0]);
+      const v1 = Number(pt[1]);
+      if (isNaN(v0) || isNaN(v1)) return null;
+
+      // Auto-detect: if one coordinate is > 90 or < -90, it is DEFINITELY Longitude!
+      if (Math.abs(v0) > 90 && Math.abs(v1) <= 90) {
+        // v0 is Longitude, v1 is Latitude -> [lat, lng] = [v1, v0]
+        return [v1, v0];
+      }
+      if (Math.abs(v1) > 90 && Math.abs(v0) <= 90) {
+        // v1 is Longitude, v0 is Latitude -> [lat, lng] = [v0, v1]
+        return [v0, v1];
+      }
+
+      // If both coordinates are <= 90, rely on sourceHint
+      if (sourceHint === "geojson") {
+        // GeoJSON specification is [lng, lat] -> convert to [lat, lng]
+        return [v1, v0];
+      } else {
+        // Standard Leaflet format is [lat, lng]
+        return [v0, v1];
+      }
+    }
+
+    return null;
+  };
+
+  const parseGeoJsonCoords = (featureRecord: any): [number, number][] => {
+    let rawList: any[] = [];
+    let hint: "geojson" | "latlngs" = "geojson";
+
+    // 1. Prioritize authoritative PostGIS geometry column
+    const geometry = featureRecord?.geometry;
+    let geom: any = null;
+
+    if (geometry) {
+      if (typeof geometry === "object" && geometry.coordinates) {
+        geom = geometry;
+      } else if (typeof geometry === "string") {
+        const cleanStr = geometry.trim();
+        if (cleanStr.startsWith("{")) {
+          try {
+            geom = JSON.parse(cleanStr);
+          } catch (e) {
+            console.error("Error parsing GeoJSON geometry string:", e);
+          }
+        } else if (/^(SRID=\d+;)?(POLYGON|LINESTRING|POINT|MULTIPOLYGON|MULTILINESTRING)/i.test(cleanStr)) {
+          geom = parseWktString(cleanStr);
+        } else {
+          geom = parseEwkbHex(cleanStr);
+        }
+      }
+    }
+
+    if (geom && geom.type === "Feature" && geom.geometry) {
+      geom = geom.geometry;
+    }
+
+    if (geom?.coordinates) {
+      hint = "geojson";
+      const geomTypeUpper = (geom.type || "").toString().toUpperCase();
+      if (geomTypeUpper.includes("POLYGON")) {
+        rawList = geomTypeUpper.includes("MULTI") ? (geom.coordinates[0]?.[0] || []) : (geom.coordinates[0] || []);
+      } else if (geomTypeUpper.includes("LINE") || geomTypeUpper.includes("STRING")) {
+        rawList = geomTypeUpper.includes("MULTI") ? (geom.coordinates[0] || []) : geom.coordinates;
+      } else if (geomTypeUpper.includes("POINT")) {
+        const pt = Array.isArray(geom.coordinates[0]) ? geom.coordinates[0] : geom.coordinates;
+        rawList = [pt];
+      } else if (Array.isArray(geom.coordinates)) {
+        if (Array.isArray(geom.coordinates[0]) && Array.isArray(geom.coordinates[0][0])) {
+          rawList = geom.coordinates[0];
+        } else {
+          rawList = geom.coordinates;
+        }
+      }
+    }
+
+    // 2. Fallback to properties.latLngs or properties.geojson if geometry column wasn't present/parsed
+    if (rawList.length === 0 && Array.isArray(featureRecord?.properties?.latLngs) && featureRecord.properties.latLngs.length > 0) {
+      rawList = featureRecord.properties.latLngs;
+      hint = "latlngs";
+    } else if (rawList.length === 0 && featureRecord?.properties?.geojson) {
+      geom = featureRecord.properties.geojson;
+      if (geom && geom.type === "Feature" && geom.geometry) geom = geom.geometry;
+      if (geom?.coordinates) {
+        hint = "geojson";
+        const geomTypeUpper = (geom.type || "").toString().toUpperCase();
+        if (geomTypeUpper.includes("POLYGON")) {
+          rawList = geomTypeUpper.includes("MULTI") ? (geom.coordinates[0]?.[0] || []) : (geom.coordinates[0] || []);
+        } else if (geomTypeUpper.includes("LINE") || geomTypeUpper.includes("STRING")) {
+          rawList = geomTypeUpper.includes("MULTI") ? (geom.coordinates[0] || []) : geom.coordinates;
+        } else if (geomTypeUpper.includes("POINT")) {
+          const pt = Array.isArray(geom.coordinates[0]) ? geom.coordinates[0] : geom.coordinates;
+          rawList = [pt];
+        }
+      }
+    }
+
+    const clean: [number, number][] = [];
+    for (const item of rawList) {
+      const pair = ensureLatLngPair(item, hint);
+      if (pair) clean.push(pair);
+    }
+
+    return clean;
   };
 
   const handleFeaturesChanged = (updatedFeatures: MapFeatureExportData[]) => {
@@ -178,23 +459,29 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Debounced Auto-Save to Supabase (3 seconds)
+    // Debounced Auto-Save to Supabase (1 second)
     autoSaveTimerRef.current = setTimeout(() => {
       saveFeaturesToCloud(updatedFeatures);
-    }, 3000);
+    }, 1000);
   };
 
   const saveFeaturesToCloud = async (featuresToSave: MapFeatureExportData[]) => {
-    if (!project || projectId.startsWith("demo-proj")) {
+    if (!project || projectId.startsWith("demo-proj") || loading) {
       setSaveStatus("synced");
       return;
     }
 
     try {
       setSaveStatus("saving");
-      // Clean existing features & bulk insert updated features
-      await supabase.from("map_features").delete().eq("project_id", projectId);
 
+      // 1. Delete features explicitly removed by user
+      const idsToDelete = [...new Set(deletedFeatureIdsRef.current)];
+      if (idsToDelete.length > 0) {
+        await supabase.from("map_features").delete().in("id", idsToDelete);
+        deletedFeatureIdsRef.current = [];
+      }
+
+      // 2. Upsert current active features
       if (featuresToSave.length > 0) {
         const payload = featuresToSave.map((f) => {
           let geometryObj: any;
@@ -211,7 +498,11 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             geometryObj = { type: "Point", coordinates: [pt[1], pt[0]] };
           }
 
-          return {
+          const isUuid = f.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(f.id);
+          const validId = isUuid ? f.id : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : undefined);
+
+          const item: any = {
+            id: validId,
             project_id: projectId,
             layer_name: f.name,
             feature_type: f.type,
@@ -219,12 +510,42 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             properties: {
               areaSqm: f.areaSqm || null,
               perimeterMeters: f.perimeterMeters || null,
+              latLngs: f.latLngs.map(([lat, lng]) => ({ lat, lng })),
+              geojson: geometryObj,
               ...f.properties,
             },
           };
+
+          return item;
         });
 
-        await supabase.from("map_features").insert(payload);
+        console.log(`📤 [Cloud Auto-Save] Mengirim ${payload.length} geometri ke Supabase:`, payload);
+
+        const { data: upsertedData, error: upsertError } = await supabase
+          .from("map_features")
+          .upsert(payload, { onConflict: "id" })
+          .select("id, properties");
+
+        if (upsertError) {
+          console.error("❌ [Cloud Auto-Save Error] Gagal upsert ke Supabase:", upsertError);
+          setSaveStatus("unsaved");
+          return;
+        }
+
+        console.log(`✅ [Cloud Auto-Save Success] Data tersimpan di Supabase (${upsertedData?.length || 0} row):`, upsertedData);
+
+        // Assign back generated UUIDs for new records
+        if (upsertedData && upsertedData.length > 0) {
+          setMapFeatures((prev) =>
+            prev.map((f, idx) => {
+              const returnedItem = upsertedData[idx];
+              if (returnedItem?.id && (!f.id || f.id.startsWith("f-") || f.id.startsWith("pt-"))) {
+                return { ...f, id: returnedItem.id };
+              }
+              return f;
+            })
+          );
+        }
       }
 
       setSaveStatus("synced");
@@ -291,13 +612,25 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     type: "FeatureCollection",
     features: mapFeatures.map((f) => {
       let geometry: any;
-      if (f.type === "Polygon" || f.type === "Rectangle") {
+      const typeLower = (f.type || "").toString().toLowerCase();
+
+      if (typeLower.includes("polygon") || typeLower.includes("rect")) {
         const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
         if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
           coords.push(coords[0]);
         }
         geometry = { type: "Polygon", coordinates: [coords] };
-      } else if (f.type === "Polyline") {
+      } else if (typeLower.includes("line") || typeLower.includes("path") || typeLower.includes("string")) {
+        geometry = { type: "LineString", coordinates: f.latLngs.map(([lat, lng]) => [lng, lat]) };
+      } else if (f.latLngs.length >= 3) {
+        // Auto-detect 3+ points as Polygon
+        const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
+        if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
+          coords.push(coords[0]);
+        }
+        geometry = { type: "Polygon", coordinates: [coords] };
+      } else if (f.latLngs.length === 2) {
+        // Auto-detect 2 points as LineString
         geometry = { type: "LineString", coordinates: f.latLngs.map(([lat, lng]) => [lng, lat]) };
       } else {
         const pt = f.latLngs[0] || [0, 0];
@@ -323,6 +656,9 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   };
 
   const handleDeleteFeature = (featureId: string) => {
+    if (featureId && !featureId.startsWith("f-") && !featureId.startsWith("pt-")) {
+      deletedFeatureIdsRef.current.push(featureId);
+    }
     const updated = mapFeatures.filter((f) => f.id !== featureId);
     handleFeaturesChanged(updated);
   };
@@ -344,7 +680,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
 
   const handleAddPoint = (lat: number, lng: number, name: string, description: string, color?: string) => {
     const newPt: MapFeatureExportData = {
-      id: `pt-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pt-${Date.now()}`,
       type: "Marker",
       name: name || "Titik Pengukuran",
       latLngs: [[lat, lng]],
@@ -355,29 +691,49 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   };
 
   const handleUpdateGeoJSON = (newGeoJson: FeatureCollection) => {
-    const converted: MapFeatureExportData[] = (newGeoJson.features || []).map((feat, idx) => {
-      const props = (feat.properties || {}) as GisFeatureProperties;
-      const type = (feat.geometry?.type || "Point") as any;
-      let latLngs: [number, number][] = [];
+    const converted: MapFeatureExportData[] = (newGeoJson.features || [])
+      .filter((feat) => feat && feat.geometry)
+      .map((feat, idx) => {
+        const props = (feat.properties || {}) as GisFeatureProperties;
+        const type = (feat.geometry?.type || "Point") as any;
+        let latLngs: [number, number][] = [];
 
-      if (type === "Polygon") {
-        const ring = (feat.geometry as any).coordinates[0] || [];
-        latLngs = ring.map((pt: [number, number]) => [pt[1], pt[0]]);
-      } else if (type === "LineString") {
-        latLngs = (feat.geometry as any).coordinates.map((pt: [number, number]) => [pt[1], pt[0]]);
-      } else if (type === "Point") {
-        const pt = (feat.geometry as any).coordinates || [0, 0];
-        latLngs = [[pt[1], pt[0]]];
+        if (type === "Polygon") {
+          const ring = (feat.geometry as any).coordinates[0] || [];
+          latLngs = ring.map((pt: any) => ensureLatLngPair(pt, "geojson")).filter(Boolean) as [number, number][];
+        } else if (type === "LineString") {
+          const coords = (feat.geometry as any).coordinates || [];
+          latLngs = coords.map((pt: any) => ensureLatLngPair(pt, "geojson")).filter(Boolean) as [number, number][];
+        } else if (type === "Point") {
+          const pt = (feat.geometry as any).coordinates || [0, 0];
+          const pair = ensureLatLngPair(pt, "geojson");
+          latLngs = pair ? [pair] : [];
+        }
+
+        const existing = mapFeatures.find((f) => f.id === props.id);
+
+        const assignedId = (props.id && props.id !== "undefined")
+          ? props.id
+          : existing?.id || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `f-${idx}-${Date.now()}`);
+
+        return {
+          id: assignedId,
+          type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
+          name: props.name || existing?.name || `Geometri ${idx + 1}`,
+          latLngs: latLngs.length > 0 ? latLngs : (existing?.latLngs || []),
+          color: props.color || existing?.color || "#2563EB",
+          properties: { ...existing?.properties, ...props },
+        };
+      });
+
+    // Detect feature deletion from map canvas
+    const newIds = new Set(converted.map((c) => c.id));
+    mapFeatures.forEach((oldF) => {
+      if (oldF.id && !newIds.has(oldF.id)) {
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(oldF.id)) {
+          deletedFeatureIdsRef.current.push(oldF.id);
+        }
       }
-
-      return {
-        id: props.id || `f-${idx}-${Date.now()}`,
-        type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
-        name: props.name || `Geometri ${idx + 1}`,
-        latLngs,
-        color: props.color || "#2563EB",
-        properties: props,
-      };
     });
 
     handleFeaturesChanged(converted);
