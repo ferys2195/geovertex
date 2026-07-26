@@ -354,7 +354,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-6">
-            <a href="https://github.com/ferys2195/gpx-tool" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+            <a href="https://gpx-tool.mazafathi.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
               Hanya butuh olah file GPX instan? Gunakan GPX Tool <ExternalLink className="w-3 h-3" />
             </a>
           </div>
