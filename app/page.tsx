@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,10 @@ export default function LandingPage() {
     features: [],
   });
 
+  useEffect(() => {
+    document.title = "GeoVertex - Collaborative GIS & Spatial Digitizing Platform";
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
       {/* Background Gradients & Glows */}
@@ -57,8 +61,8 @@ export default function LandingPage() {
             </div>
             <div>
               <span className="font-bold text-xl text-white tracking-tight">GeoVertex</span>
-              <span className="ml-2 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-widest">
-                SaaS V1.0
+              <span className="ml-2 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-widest">
+                BETA V1.0
               </span>
             </div>
           </div>
@@ -114,7 +118,7 @@ export default function LandingPage() {
             </Button>
           </Link>
           <a href="#sandbox">
-            <Button size="lg" variant="outline" className="w-full sm:w-auto h-13 px-8 border-slate-800 bg-slate-900/60 hover:bg-slate-900 text-slate-200 font-semibold text-base rounded-xl">
+            <Button size="lg" className="w-full sm:w-auto h-13 px-8 border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold text-base rounded-xl">
               <MousePointerClick className="w-5 h-5 mr-2 text-emerald-400" /> Coba Demo Interaktif
             </Button>
           </a>
@@ -299,8 +303,8 @@ export default function LandingPage() {
               </ul>
             </div>
             <Link href="/login">
-              <Button variant="outline" className="w-full h-12 border-slate-800 hover:bg-slate-800 text-white font-semibold">
-                Daftar Gratis Now
+              <Button className="w-full h-12 border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-100 font-semibold rounded-xl">
+                Daftar Gratis Sekarang
               </Button>
             </Link>
           </div>

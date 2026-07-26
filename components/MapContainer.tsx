@@ -395,8 +395,8 @@ export default function MapContainer({
     if (!mapContainerRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [-6.1754, 106.8272], // Central Monas, Jakarta
-      zoom: 13,
+      center: [-2.5, 118.0], // Center of Indonesia Archipelago
+      zoom: 5,
       zoomControl: false, // Customize position of controls
       maxZoom: 24,
     });

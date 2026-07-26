@@ -56,6 +56,14 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     fetchProjectData();
   }, [projectId]);
 
+  useEffect(() => {
+    if (project?.title) {
+      document.title = `${project.title} | Editor GeoVertex`;
+    } else {
+      document.title = "Editor Proyek | GeoVertex";
+    }
+  }, [project?.title]);
+
   const fetchProjectData = async () => {
     try {
       setLoading(true);
@@ -75,9 +83,9 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
           owner_id: "demo-user-1",
           title: "Proyek Pemetaan Lahan (Demo)",
           description: "Mode Uji Coba Lahan",
-          center_lat: -6.2,
-          center_lng: 106.816666,
-          zoom_level: 14,
+          center_lat: -2.5,
+          center_lng: 118.0,
+          zoom_level: 5,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
