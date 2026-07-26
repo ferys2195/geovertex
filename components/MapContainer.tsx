@@ -604,10 +604,18 @@ export default function MapContainer({
         syncMapToState();
       };
 
+      const handleLayerDragActive = () => {
+        if (layer._pm_temp_id === selectedFeatureIdRef.current) {
+          updateFocusedMeasurementsForLayer(layer);
+        }
+        updatePopupContent();
+      };
+
       layer.on('pm:edit', handleLayerGeomChange);
-      layer.on('pm:drag', handleLayerGeomChange);
-      layer.on('pm:markerdrag', handleLayerGeomChange);
+      layer.on('pm:drag', handleLayerDragActive);
+      layer.on('pm:markerdrag', handleLayerDragActive);
       layer.on('pm:dragend', handleLayerGeomChange);
+      layer.on('pm:markerdragend', handleLayerGeomChange);
     };
 
     bindLayerInteractiveListenersRef.current = bindLayerInteractiveListeners;
