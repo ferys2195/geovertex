@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="#2563EB"/>
+  <!-- Map Layer 1 (Back) -->
+  <path d="M32 10L10 21L32 32L54 21L32 10Z" fill="#93C5FD" opacity="0.95"/>
+  <!-- Map Layer 2 (Middle) -->
+  <path d="M10 31L32 42L54 31" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Map Layer 3 (Front) -->
+  <path d="M10 41L32 52L54 41" stroke="#60A5FA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Spatial Vertex Markers -->
+  <circle cx="32" cy="10" r="3" fill="#FFFFFF"/>
+  <circle cx="54" cy="21" r="3" fill="#FFFFFF"/>
+  <circle cx="10" cy="21" r="3" fill="#FFFFFF"/>
+  <circle cx="32" cy="32" r="3.5" fill="#38BDF8"/>
+</svg>

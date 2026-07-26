@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    document.title = "Dashboard Proyek | GeoVertex";
     fetchUserDataAndProjects();
   }, []);
 

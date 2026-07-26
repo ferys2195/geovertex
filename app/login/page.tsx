@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Layers, ArrowLeft, Loader2, ShieldCheck, Map, CheckCircle2 } from "lucide-react";
@@ -10,6 +10,10 @@ import { isDevModeAllowed } from "@/lib/utils";
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = "Masuk Akun | GeoVertex";
+  }, []);
 
   const handleGoogleLogin = async () => {
     try {
@@ -113,8 +117,7 @@ export default function LoginPage() {
             {isDevModeAllowed() && (
               <Link href="/dashboard" className="block">
                 <Button
-                  variant="outline"
-                  className="w-full h-11 border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 font-medium text-xs rounded-xl flex items-center justify-center gap-2"
+                  className="w-full h-11 border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium text-xs rounded-xl flex items-center justify-center gap-2"
                 >
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   <span>Masuk Mode Pengembang (Demo tanpa Login)</span>
