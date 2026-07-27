@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ExportModal } from "./modals/ExportModal";
 import { ShareModal } from "./modals/ShareModal";
+import { EditAttributesModal } from "./modals/EditAttributesModal";
 import { MapFeatureExportData } from "@/lib/export/pdfExporter";
 import { Button } from "@/components/ui/button";
 import { Share2, Download, Cloud, CloudOff, Loader2, ArrowLeft, PanelLeft } from "lucide-react";
@@ -31,11 +32,12 @@ interface ProjectEditorViewProps {
 }
 
 export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
-  // Custom hooks for initialization and auto-save
   useProjectInit(projectId);
   useAutoSave();
 
-  // Store bindings
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
+
   const project = useProjectStore((state) => state.project);
   const currentRole = useProjectStore((state) => state.currentRole);
   const members = useProjectStore((state) => state.members);
@@ -103,40 +105,40 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
     deleteMapFeature(featureId);
   };
 
-  const handleUpdateFeatureProperties = (featureId: string, props: GisFeatureProperties) => {
+  const handleUpdateFeatureProperties = (featureId: string, properties: GisFeatureProperties) => {
     updateMapFeature(featureId, {
-      name: props.name,
-      color: props.color,
-      properties: props,
+      name: properties.name,
+      color: properties.color,
+      properties: properties as Record<string, unknown>,
     });
   };
 
   const handleAddPoint = (lat: number, lng: number, name: string, description: string, color?: string) => {
-    const newPt: MapFeatureExportData = {
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pt-${Date.now()}`,
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pt-${Date.now()}`;
+    addMapFeature({
+      id,
       type: "Marker",
-      name: name || "Titik Pengukuran",
+      name: name || "Point Marker Baru",
       latLngs: [[lat, lng]],
-      color: color || "#2563EB",
-      properties: { description },
-    };
-    addMapFeature(newPt);
+      color: color || "#DC2626",
+      properties: { id, name, description },
+    });
   };
 
-  const handleUpdateGeoJSON = (newGeoJson: FeatureCollection) => {
-    const converted: MapFeatureExportData[] = (newGeoJson.features || [])
+  const handleUpdateGeoJSON = (data: FeatureCollection) => {
+    const converted: MapFeatureExportData[] = data.features
       .filter((feat) => feat && feat.geometry)
       .map((feat, idx) => {
         const props = (feat.properties || {}) as GisFeatureProperties;
-        const type = (feat.geometry?.type || "Point") as string;
-        let latLngs: [number, number][] = [];
+        const type = feat.geometry.type;
 
+        let latLngs: [number, number][] = [];
         if (type === "Polygon") {
-          const ring = (feat.geometry as unknown as { coordinates: number[][][] }).coordinates[0] || [];
-          latLngs = ring.map((pt) => [Number(pt[1]), Number(pt[0])]);
+          const coords = (feat.geometry as unknown as { coordinates: number[][][] }).coordinates[0] || [];
+          latLngs = coords.map(([lng, lat]) => [Number(lat), Number(lng)]);
         } else if (type === "LineString") {
           const coords = (feat.geometry as unknown as { coordinates: number[][] }).coordinates || [];
-          latLngs = coords.map((pt) => [Number(pt[1]), Number(pt[0])]);
+          latLngs = coords.map(([lng, lat]) => [Number(lat), Number(lng)]);
         } else if (type === "Point") {
           const pt = (feat.geometry as unknown as { coordinates: number[] }).coordinates || [0, 0];
           latLngs = [[Number(pt[1]), Number(pt[0])]];
@@ -213,6 +215,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   }
 
   const isReadOnly = currentRole === "viewer";
+  const targetEditingFeature = mapFeatures.find((f) => f.id === editingFeatureId) || null;
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-slate-950 font-sans">
@@ -305,6 +308,10 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
             selectedPdfFeatureId={selectedPdfFeatureId}
             onSelectPdfFeature={setSelectedPdfFeatureId}
             onOpenExportModal={() => setIsExportOpen(true)}
+            onEditFeature={(featureId) => {
+              setEditingFeatureId(featureId);
+              setIsEditModalOpen(true);
+            }}
           />
         )}
 
@@ -321,8 +328,8 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
             onOpenExportModal={() => setIsExportOpen(true)}
             onDeleteFeature={handleDeleteFeature}
             onEditFeature={(featureId) => {
-              if (!isSidebarOpen) toggleSidebar();
-              setSelectedPdfFeatureId(featureId);
+              setEditingFeatureId(featureId);
+              setIsEditModalOpen(true);
             }}
             readOnly={isReadOnly}
           />
@@ -347,6 +354,15 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
         currentRole={currentRole}
         onInviteMember={handleInviteMember}
         onRemoveMember={handleRemoveMember}
+      />
+
+      <EditAttributesModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        feature={targetEditingFeature}
+        onSave={(featureId, props) => {
+          handleUpdateFeatureProperties(featureId, props);
+        }}
       />
     </div>
   );

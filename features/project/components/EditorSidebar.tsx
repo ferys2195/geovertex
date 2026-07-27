@@ -33,6 +33,7 @@ interface EditorSidebarProps {
   selectedPdfFeatureId?: string | null;
   onSelectPdfFeature?: (id: string | null) => void;
   onOpenExportModal?: () => void;
+  onEditFeature?: (featureId: string) => void;
 }
 
 export function EditorSidebar({
@@ -44,6 +45,7 @@ export function EditorSidebar({
   selectedPdfFeatureId = null,
   onSelectPdfFeature = () => {},
   onOpenExportModal,
+  onEditFeature,
 }: EditorSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState<string>("");
@@ -361,7 +363,7 @@ export function EditorSidebar({
                                     size="icon"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleStartEditFeature(feature);
+                                      onEditFeature?.(featureId);
                                     }}
                                     className="w-7 h-7 text-muted-foreground hover:text-foreground"
                                   >
