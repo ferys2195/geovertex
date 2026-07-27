@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, Plus, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, ChevronDown, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,8 @@ export function SidebarFeatureEditForm({
   onRenameCustomPropKey,
   onApplyTemplate,
 }: SidebarFeatureEditFormProps) {
+  const [isPresetOpen, setIsPresetOpen] = useState(false);
+
   return (
     <Card className="p-3 bg-muted/30 border-primary/40 space-y-2.5">
       <div className="flex items-center justify-between border-b border-border pb-1.5">
@@ -85,14 +87,42 @@ export function SidebarFeatureEditForm({
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Custom Properties</span>
           <div className="flex gap-1">
-            <Button variant="outline" size="sm" className="h-6 text-[9px] px-2" onClick={() => onApplyTemplate("surat_tanah")}>
-              + Surat Tanah
+            <Button
+              type="button"
+              variant={isPresetOpen ? "secondary" : "outline"}
+              size="sm"
+              className="h-6 text-[9px] px-1.5 flex items-center gap-0.5"
+              onClick={() => setIsPresetOpen(!isPresetOpen)}
+            >
+              + Preset <ChevronDown className={`w-2.5 h-2.5 opacity-70 transition-transform ${isPresetOpen ? "rotate-180" : ""}`} />
             </Button>
-            <Button variant="outline" size="sm" className="h-6 w-6 p-0" onClick={onAddCustomProp}>
+            <Button type="button" variant="outline" size="sm" className="h-6 w-6 p-0" onClick={onAddCustomProp}>
               <Plus className="w-3 h-3" />
             </Button>
           </div>
         </div>
+
+        {/* Expandable Preset Panel */}
+        {isPresetOpen && (
+          <div className="p-2 bg-background/80 rounded border border-border space-y-1 my-1">
+            <p className="text-[10px] font-semibold text-muted-foreground">Pilih preset atribut:</p>
+            <div className="flex flex-wrap gap-1">
+              {Object.entries(TEMPLATES).map(([key, tmpl]) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-5 text-[9px] px-1.5 bg-background hover:bg-primary/10 text-foreground flex items-center gap-1"
+                  onClick={() => onApplyTemplate(key as keyof typeof TEMPLATES)}
+                >
+                  <Plus className="w-2.5 h-2.5 text-emerald-500" />
+                  <span>{tmpl.name}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
           {Object.entries(editCustomProps).map(([key, val], i) => (
             <div key={i} className="flex items-center gap-1.5">

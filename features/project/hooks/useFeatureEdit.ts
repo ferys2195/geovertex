@@ -25,8 +25,9 @@ export function useFeatureEdit({ geoJsonData, onUpdateFeatureProperties }: UseFe
     setEditColor(props.color || "#3b82f6");
 
     const custom: Record<string, string> = {};
+    const IGNORED_KEYS = ["id", "name", "description", "color", "areaSqm", "perimeterMeters", "geojson", "latlngs", "latLngs", "geometry", "type", "latlng", "latLng", "gpxType"];
     Object.entries(props).forEach(([k, v]) => {
-      if (!["id", "name", "description", "color", "areaSqm", "perimeterMeters"].includes(k)) {
+      if (!IGNORED_KEYS.includes(k) && typeof v !== "object") {
         custom[k] = String(v ?? "");
       }
     });
