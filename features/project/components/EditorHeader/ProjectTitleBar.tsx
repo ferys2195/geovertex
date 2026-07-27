@@ -41,7 +41,7 @@ export function ProjectTitleBar({
       </Button>
 
       <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-        <h1 className="font-bold text-xs sm:text-sm text-white truncate max-w-[90px] xs:max-w-[130px] sm:max-w-[200px] md:max-w-xs">
+        <h1 className="font-bold text-xs sm:text-sm text-white truncate max-w-22.5 xs:max-w-[130px] sm:max-w-50 md:max-w-xs">
           {projectTitle || "Proyek Pemetaan"}
         </h1>
         <span
