@@ -9,6 +9,7 @@ interface MapCoordinateBarProps {
   internalHoverCoords: LatLngCoords | null;
   activeCoordMode: CoordinateMode;
   onToggleCoordinateMode: () => void;
+  isSidebarOpen?: boolean;
 }
 
 export function MapCoordinateBar({
@@ -16,28 +17,32 @@ export function MapCoordinateBar({
   internalHoverCoords,
   activeCoordMode,
   onToggleCoordinateMode,
+  isSidebarOpen = false,
 }: MapCoordinateBarProps) {
   const currentHover = hoverCoords || internalHoverCoords;
 
   return (
-    <div className="absolute bottom-4 left-4 z-1000 bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px]">
-      <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-      <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px]">Kursor:</span>
+    <div
+      className="absolute bottom-4 z-1000 bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      style={{ left: isSidebarOpen ? '336px' : '16px' }}
+    >
+      <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse shrink-0" />
+      <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px] shrink-0">Kursor:</span>
       {currentHover ? (
         activeCoordMode === 'UTM' ? (
-          <span className="text-slate-900 font-extrabold">
+          <span className="text-slate-900 font-extrabold truncate">
             {latLngToUtm(currentHover.lat, currentHover.lng).formatted}
           </span>
         ) : (
-          <span className="text-slate-900 font-extrabold">
+          <span className="text-slate-900 font-extrabold truncate">
             Lat: <span>{currentHover.lat.toFixed(6)}°</span>, Lng: <span>{currentHover.lng.toFixed(6)}°</span>
           </span>
         )
       ) : (
-        <span className="text-slate-500 font-medium italic">Pindahkan kursor di atas peta</span>
+        <span className="text-slate-500 font-medium italic truncate">Pindahkan kursor di atas peta</span>
       )}
 
-      <div className="h-3 w-px bg-slate-200 mx-1" />
+      <div className="h-3 w-px bg-slate-200 mx-1 shrink-0" />
 
       <button
         onClick={onToggleCoordinateMode}

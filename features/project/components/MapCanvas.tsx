@@ -213,6 +213,7 @@ export function MapCanvas({
           setActiveCoordMode(nextMode);
           onCoordinateModeChange?.(nextMode);
         }}
+        isSidebarOpen={isSidebarOpen}
       />
 
       {/* UTM CONVERTER DIALOG */}
