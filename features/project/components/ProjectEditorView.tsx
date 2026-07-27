@@ -177,7 +177,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="md:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-xs"
+                className="block md:hidden fixed inset-0 bg-black/50 z-30 backdrop-blur-xs pointer-events-auto"
                 onClick={toggleSidebar}
               />
 
@@ -191,7 +191,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
                   duration: 0.3,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                className="absolute left-0 top-0 bottom-0 z-20 h-full w-80 shrink-0 shadow-2xl bg-slate-900 border-r border-slate-800"
+                className="absolute left-0 top-0 bottom-0 z-40 h-full w-80 shrink-0 shadow-2xl bg-slate-900 border-r border-slate-800 pointer-events-auto"
               >
                 <EditorSidebar
                   geoJsonData={geoJsonData}
