@@ -165,18 +165,18 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
       />
 
       {/* Main Content Body: Sidebar + Map Canvas Container */}
-      <div className="flex-1 relative overflow-hidden flex flex-row">
-        {/* Sidebar Panel with Smooth Slide Animation */}
-        <AnimatePresence initial={false}>
+      <div className="flex-1 relative overflow-hidden flex flex-row bg-slate-950">
+        {/* Sidebar Panel with Synchronized Smooth Slide Animation */}
+        <AnimatePresence>
           {isSidebarOpen && (
             <>
-              {/* Backdrop overlay for mobile screen */}
+              {/* Mobile backdrop overlay with perfectly matched duration */}
               <motion.div
                 key="sidebar-backdrop"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className="md:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-xs"
                 onClick={toggleSidebar}
               />
@@ -184,16 +184,14 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
               {/* Sidebar panel with smooth sliding transition */}
               <motion.div
                 key="sidebar-panel"
-                initial={{ x: "-100%", opacity: 0.3 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: "-100%", opacity: 0 }}
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
                 transition={{
-                  type: "spring",
-                  stiffness: 280,
-                  damping: 28,
-                  mass: 0.7,
+                  duration: 0.3,
+                  ease: [0.16, 1, 0.3, 1],
                 }}
-                className="absolute md:relative left-0 top-0 bottom-0 z-40 h-full shrink-0 shadow-2xl"
+                className="absolute left-0 top-0 bottom-0 z-20 h-full w-80 shrink-0 shadow-2xl bg-slate-900 border-r border-slate-800"
               >
                 <EditorSidebar
                   geoJsonData={geoJsonData}
