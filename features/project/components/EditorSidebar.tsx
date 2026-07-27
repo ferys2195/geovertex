@@ -9,6 +9,7 @@ import { useFeatureEdit } from "../hooks/useFeatureEdit";
 
 import { SidebarHeader } from "./Sidebar/SidebarHeader";
 import { SidebarSearch } from "./Sidebar/SidebarSearch";
+import { SidebarFilterTabs, FeatureFilterType } from "./Sidebar/SidebarFilterTabs";
 import { SidebarEmptyState } from "./Sidebar/SidebarEmptyState";
 import { SidebarFeatureItem } from "./Sidebar/SidebarFeatureItem";
 import { SidebarFooter } from "./Sidebar/SidebarFooter";
@@ -25,6 +26,7 @@ export function EditorSidebar({
   onEditFeature,
 }: EditorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [activeFilter, setActiveFilter] = useState<FeatureFilterType>("ALL");
 
   const {
     editingId,
@@ -44,12 +46,32 @@ export function EditorSidebar({
     handleApplyTemplate,
   } = useFeatureEdit({ geoJsonData, onUpdateFeatureProperties });
 
-  // Filter features based on search query
+  // Filter features based on tab filter and search query
   const filteredFeatures = useMemo(() => {
-    if (!searchQuery.trim()) return geoJsonData.features;
+    let list = geoJsonData.features;
+
+    // 1. Filter by geometry type tab
+    if (activeFilter !== "ALL") {
+      list = list.filter((feat) => {
+        const type = feat.geometry?.type;
+        if (activeFilter === "Polygon") {
+          return type === "Polygon" || type === "MultiPolygon";
+        }
+        if (activeFilter === "LineString") {
+          return type === "LineString" || type === "MultiLineString";
+        }
+        if (activeFilter === "Point") {
+          return type === "Point" || type === "MultiPoint";
+        }
+        return true;
+      });
+    }
+
+    // 2. Filter by search query
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
 
-    return geoJsonData.features.filter((feat, idx) => {
+    return list.filter((feat, idx) => {
       const props = (feat.properties || {}) as GisFeatureProperties;
       const name = (props.name || `Geometri ${idx + 1}`).toLowerCase();
       const desc = (props.description || "").toLowerCase();
@@ -61,7 +83,7 @@ export function EditorSidebar({
         ([k, v]) => k.toLowerCase().includes(q) || String(v ?? "").toLowerCase().includes(q)
       );
     });
-  }, [geoJsonData.features, searchQuery]);
+  }, [geoJsonData.features, activeFilter, searchQuery]);
 
   return (
     <aside className="w-80 bg-slate-900 border-r border-slate-800 text-foreground flex flex-col h-full shrink-0 z-20 shadow-xl">
@@ -73,13 +95,22 @@ export function EditorSidebar({
         onClearSearch={() => setSearchQuery("")}
       />
 
+      <SidebarFilterTabs
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+        features={geoJsonData.features}
+      />
+
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         <div className="space-y-2">
           {geoJsonData.features.length === 0 || filteredFeatures.length === 0 ? (
             <SidebarEmptyState
               totalFeaturesCount={geoJsonData.features.length}
               searchQuery={searchQuery}
-              onResetSearch={() => setSearchQuery("")}
+              onResetSearch={() => {
+                setSearchQuery("");
+                setActiveFilter("ALL");
+              }}
             />
           ) : (
             <div className="space-y-2.5">
