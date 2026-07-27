@@ -149,7 +149,7 @@ export function HomeHeader() {
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
                   <UserIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
-                <span className="max-w-[70px] xs:max-w-[100px] sm:max-w-[120px] truncate text-xs font-medium text-slate-200">
+                <span className="max-w-17.5 xs:max-w-[100px] sm:max-w-30 truncate text-xs font-medium text-slate-200">
                   {userName || user.email?.split("@")[0] || "Akun Saya"}
                 </span>
                 <ChevronDown
