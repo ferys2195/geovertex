@@ -82,6 +82,7 @@ export function MapCanvas({
     geojsonGroupRef,
     isMapReady,
     geoJsonData,
+    coordinateMode: activeCoordMode,
     onGeoJsonChange,
     selectedFeatureId,
     setSelectedFeatureId,
