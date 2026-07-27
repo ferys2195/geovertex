@@ -27,6 +27,7 @@ export function MapCanvas({
   setHoverCoords = () => {},
   zoomToTrigger = null,
   readOnly = false,
+  isSidebarOpen = false,
   selectedPdfFeatureId = null,
   onSelectPdfFeature = () => {},
   onOpenExportModal,
@@ -148,6 +149,14 @@ export function MapCanvas({
 
   return (
     <MapContextMenu onCopyCoordinates={handleCopyCoordinates}>
+      {/* Global CSS Override to smoothly shift Geoman & Leaflet Top-Left controls when Sidebar opens */}
+      <style jsx global>{`
+        .leaflet-top.leaflet-left {
+          left: ${isSidebarOpen ? '332px' : '10px'} !important;
+          transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+      `}</style>
+
       <div 
         ref={mapContainerRef} 
         className="w-full h-full z-10 font-sans"
@@ -163,7 +172,10 @@ export function MapCanvas({
       />
 
       {/* UTM CONVERTER TOOLBAR BUTTON & INSTRUCTIONS */}
-      <MapUtmToolbar onOpenUtmDialog={() => setIsUtmDialogOpen(true)} />
+      <MapUtmToolbar
+        onOpenUtmDialog={() => setIsUtmDialogOpen(true)}
+        isSidebarOpen={isSidebarOpen}
+      />
 
       {/* MOUSE HOVER COORDINATES METRIC DISPLAY & TOGGLE */}
       <MapCoordinateBar

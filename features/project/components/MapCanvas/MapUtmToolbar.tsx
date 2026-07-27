@@ -3,11 +3,15 @@ import { Calculator } from 'lucide-react';
 
 interface MapUtmToolbarProps {
   onOpenUtmDialog: () => void;
+  isSidebarOpen?: boolean;
 }
 
-export function MapUtmToolbar({ onOpenUtmDialog }: MapUtmToolbarProps) {
+export function MapUtmToolbar({ onOpenUtmDialog, isSidebarOpen = false }: MapUtmToolbarProps) {
   return (
-    <div className="absolute top-4 left-14 z-1000 flex items-center gap-2">
+    <div
+      className="absolute top-4 z-1000 flex items-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      style={{ left: isSidebarOpen ? '376px' : '56px' }}
+    >
       <button
         onClick={onOpenUtmDialog}
         className="bg-white/95 backdrop-blur-xs hover:bg-white text-slate-900 px-3 py-1.5 rounded-md border border-slate-200 shadow-md font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"

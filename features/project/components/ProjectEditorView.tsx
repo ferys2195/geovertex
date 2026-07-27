@@ -222,6 +222,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
             coordinateMode={coordinateMode}
             onCoordinateModeChange={setCoordinateMode}
             zoomToTrigger={zoomToTrigger}
+            isSidebarOpen={isSidebarOpen}
             selectedPdfFeatureId={selectedPdfFeatureId}
             onSelectPdfFeature={setSelectedPdfFeatureId}
             onOpenExportModal={() => setIsExportOpen(true)}

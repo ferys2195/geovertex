@@ -10,6 +10,7 @@ export interface MapContainerProps {
   setHoverCoords?: (coords: { lat: number; lng: number } | null) => void;
   zoomToTrigger?: { id: string; time: number } | null;
   readOnly?: boolean;
+  isSidebarOpen?: boolean;
   selectedPdfFeatureId?: string | null;
   onSelectPdfFeature?: (id: string | null) => void;
   onOpenExportModal?: () => void;
