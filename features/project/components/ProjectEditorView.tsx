@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { motion, AnimatePresence } from "motion/react";
 import { ExportModal } from "./modals/ExportModal";
 import { ShareModal } from "./modals/ShareModal";
 import { EditAttributesModal } from "./modals/EditAttributesModal";
@@ -165,34 +166,55 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
 
       {/* Main Content Body: Sidebar + Map Canvas Container */}
       <div className="flex-1 relative overflow-hidden flex flex-row">
-        {/* Sidebar Panel */}
-        {isSidebarOpen && (
-          <>
-            {/* Backdrop overlay for mobile screen */}
-            <div
-              className="md:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-xs"
-              onClick={toggleSidebar}
-            />
-            <div className="absolute md:relative left-0 top-0 bottom-0 z-40 h-full">
-              <EditorSidebar
-                geoJsonData={geoJsonData}
-                onUpdateGeoJSON={handleUpdateGeoJSON}
-                coordinateMode={coordinateMode}
-                onZoomToFeature={handleZoomToFeature}
-                onDeleteFeature={handleDeleteFeature}
-                onUpdateFeatureProperties={handleUpdateFeatureProperties}
-                onAddPoint={handleAddPoint}
-                selectedPdfFeatureId={selectedPdfFeatureId}
-                onSelectPdfFeature={setSelectedPdfFeatureId}
-                onOpenExportModal={() => setIsExportOpen(true)}
-                onEditFeature={(featureId) => {
-                  setEditingFeatureId(featureId);
-                  setIsEditModalOpen(true);
-                }}
+        {/* Sidebar Panel with Smooth Slide Animation */}
+        <AnimatePresence initial={false}>
+          {isSidebarOpen && (
+            <>
+              {/* Backdrop overlay for mobile screen */}
+              <motion.div
+                key="sidebar-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="md:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-xs"
+                onClick={toggleSidebar}
               />
-            </div>
-          </>
-        )}
+
+              {/* Sidebar panel with smooth sliding transition */}
+              <motion.div
+                key="sidebar-panel"
+                initial={{ x: "-100%", opacity: 0.3 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "-100%", opacity: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 280,
+                  damping: 28,
+                  mass: 0.7,
+                }}
+                className="absolute md:relative left-0 top-0 bottom-0 z-40 h-full shrink-0 shadow-2xl"
+              >
+                <EditorSidebar
+                  geoJsonData={geoJsonData}
+                  onUpdateGeoJSON={handleUpdateGeoJSON}
+                  coordinateMode={coordinateMode}
+                  onZoomToFeature={handleZoomToFeature}
+                  onDeleteFeature={handleDeleteFeature}
+                  onUpdateFeatureProperties={handleUpdateFeatureProperties}
+                  onAddPoint={handleAddPoint}
+                  selectedPdfFeatureId={selectedPdfFeatureId}
+                  onSelectPdfFeature={setSelectedPdfFeatureId}
+                  onOpenExportModal={() => setIsExportOpen(true)}
+                  onEditFeature={(featureId) => {
+                    setEditingFeatureId(featureId);
+                    setIsEditModalOpen(true);
+                  }}
+                />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Map Canvas */}
         <div className="flex-1 relative overflow-hidden h-full">
