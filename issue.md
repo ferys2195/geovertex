@@ -1,49 +1,53 @@
-# 📋 [ISSUE / PLAN] Refactoring Features/Project: Logic Hooks & Zustand Store (Strict UI Preservation)
+# 📋 [ISSUE] Forced Dark Mode Only & Activity-Based Auto-Save Optimization
 
-## 📌 Ringkasan Refactoring
+## 📌 Deskripsi Issue
 
-Fokus utama refactoring pada modul `features/project` adalah:
-1. **Mengekstrak Pengelolaan State ke Zustand Store**: Memusatkan state aplikasi (`project`, `members`, `mapFeatures`, `saveStatus`, modal states, selection) ke dalam Zustand store (`useProjectStore.ts`).
-2. **Mengekstrak Business Logic ke Custom Hooks**: Memindahkan data fetching Supabase, cloud auto-saving, dan GIS math ke custom hooks (`useProjectInit`, `useAutoSave`, `useGisCalculations`).
-3. **Strict UI Preservation (100% Tampilan Asli)**: **TIDAK MENGUBAH TAMPILAN VISUAL, STYLING TAILWIND, DAN MOUNTING KOMPONEN ASLI SAMA SEKALI**. Seluruh tata letak, card, badge, animasi, dan komponen UI tetap identik dengan versi awal.
+Berdasarkan pengujian UI dan UX pada lingkungan Production & Lokal, terdapat 2 poin perbaikan krusial yang perlu diterapkan:
 
----
+### 1. Forced Dark Mode Only & Removal of Theme Hotkey
+- **Masalah**: Light Mode saat ini belum stabil secara visual pada komponen GIS dan berisiko membingungkan pengguna jika tema berubah tiba-tiba. Selain itu, shortcut tombol keyboard `"D"` secara tidak sengaja men-toggle tema saat pengguna sedang beraktivitas.
+- **Solusi**: 
+  - Tetapkan tema ke **Dark Mode Only** secara permanen pada `ThemeProvider` (`forcedTheme="dark"` / `defaultTheme="dark"`).
+  - Hapus/nonaktifkan shortcut keyboard tombol `"D"` (`ThemeHotkey`) agar tidak mengganti tema secara tidak sengaja.
+  - Pastikan seluruh variabel CSS dan elemen UI selalu konsisten bertema gelap di Production maupun Lokal.
 
-## 🏗️ Struktur Modul `features/project`
-
-```
-features/project/
-├── index.ts                            # Public API Fitur Project
-├── types/
-│   └── project.types.ts                # Type definitions & GIS Interfaces
-├── store/                              # 🧠 TERPUSAT: State Management (Zustand)
-│   └── useProjectStore.ts              # Store untuk Project, Features, Selection, UI & Save Status
-├── hooks/                              # ⚙️ REUSABLE LOGIC (Custom Hooks)
-│   ├── useProjectInit.ts               # Fetch data project, members, & features dari Supabase/Demo
-│   ├── useAutoSave.ts                  # Auto-save engine (debounced 2s sync ke Supabase)
-│   └── useGisCalculations.ts           # Kalkulasi GIS (Luas, Keliling, UTM Conversion)
-└── components/                         # 🎨 UI COMPONENTS (Visual 100% Preserved)
-    ├── ProjectEditorView.tsx           # Entry View Layout utama
-    ├── EditorSidebar.tsx               # Sidebar dengan Quick Stats, Feature List, & Atribut (Persis Asli)
-    ├── MapCanvas.tsx                   # Leaflet Map Canvas (Persis Asli)
-    └── modals/                         # Reusable Modals & Dialogs
-        ├── ExportModal.tsx             # Modal export (GeoJSON, KML, GPX, PDF)
-        ├── ShareModal.tsx              # Modal invite & kelola tim
-        └── UtmConverterDialog.tsx      # Standalone dialog konversi UTM
-```
+### 2. Activity-Based Auto-Save Engine & Auto-Save Toggle
+- **Masalah**: Mekanisme auto-save saat ini berjalan secara konstan meskipun tidak ada aktivitas baru di peta (*map canvas*), yang berpotensi memicu request berlebihan dan berdampak pada performa.
+- **Solusi**:
+  - **Activity/Dirty State Tracking**: Auto-save hanya akan terpicu ketika ada **aktivitas nyata pada peta** (misal: menggambar polygon, menggeser titik vertex, mengubah atribut bidang, atau menghapus geometri).
+  - **Setting Toggle Auto-Save**: Tambahkan opsi sakelar (Toggle Switch) pada navbar status cloud untuk **Enable / Disable Auto-Save** sesuai kebutuhan pengguna.
 
 ---
 
-## 📑 Rencana Eksekusi Refactoring (Completed Task List)
+## 🛠️ Rencana Perubahan Komponen
 
-- [x] **1. Setup State Management Terpusat dengan Zustand (`useProjectStore.ts`)**
-- [x] **2. Ekstraksi Logic Data Fetching (`useProjectInit.ts`)**
-- [x] **3. Ekstraksi Logic Auto-Save Cloud (`useAutoSave.ts`)**
-- [x] **4. Ekstraksi Logic Spasial GIS (`useGisCalculations.ts`)**
-- [x] **5. Strict Preservasi Tampilan Asli `EditorSidebar.tsx`, `MapCanvas.tsx`, & `ProjectEditorView.tsx`**
-- [x] **6. Validation `npx tsc --noEmit` & `npm run build` (PASSED 100%)**
-- [x] **7. Dokumentasi Arsitektur di `@/ARCHITECTURE.md`**
+### A. Theme Management
+1. **`components/providers/theme-provider.tsx`**:
+   - Konfigurasi `forcedTheme="dark"`, `defaultTheme="dark"`.
+   - Hapus komponen `ThemeHotkey` (listener tombol `"D"`).
+2. **`app/layout.tsx`**:
+   - Berikan `className="dark"` pada elemen `<html>` dan pastikan hydration berjalan tanpa warning.
+
+### B. Auto-Save Optimization & Store Settings
+1. **`features/project/store/useProjectStore.ts`**:
+   - Tambahkan state `isAutoSaveEnabled: boolean` (default: `true`) dan action `toggleAutoSave()`.
+   - Tambahkan state `isDirty: boolean` dan `markDirty()`, `clearDirty()`.
+2. **`features/project/hooks/useAutoSave.ts`**:
+   - Perbarui logika auto-save agar hanya mengeksekusi sinkronisasi Supabase jika `isAutoSaveEnabled === true` DAN `isDirty === true` (ada aktivitas baru di canvas peta).
+   - Setelah sukses menyimpan ke Supabase, panggil `clearDirty()`.
+3. **`features/project/components/ProjectEditorView.tsx`**:
+   - Tambahkan kontrol UI **Toggle Auto-Save** pada navbar status cloud (samping status *Tersimpan di Cloud*).
 
 ---
 
-*GeoVertex Refactoring Issue Document — Strict UI Preservation Standard*
+## 📑 Task List Eksekusi
+
+- [ ] **1. Terapkan Forced Dark Mode Only pada `theme-provider.tsx` & Hapus Hotkey Tombol "D"**
+- [ ] **2. Tambahkan State `isAutoSaveEnabled` & `isDirty` pada `useProjectStore.ts`**
+- [ ] **3. Perbarui Logic `useAutoSave.ts` (Hanya Save Jika Ada Aktivitas/Dirty)**
+- [ ] **4. Tambahkan Tombol Sakelar Toggle Auto-Save pada Navbar `ProjectEditorView.tsx`**
+- [ ] **5. Validasi Build Next.js (`npm run build`) & Uji Coba Performa**
+
+---
+
+*GeoVertex Issue Document — Forced Dark Mode & Smart Auto-Save Standard*
