@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   FileText,
   Trash2,
@@ -10,6 +10,8 @@ import {
   Plus,
   Compass,
   Layers,
+  Search,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { FeatureCollection } from "geojson";
@@ -52,6 +54,7 @@ export function EditorSidebar({
   const [editDesc, setEditDesc] = useState<string>("");
   const [editColor, setEditColor] = useState<string>("#3b82f6");
   const [editCustomProps, setEditCustomProps] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Start Editing Feature
   const handleStartEditFeature = (feature: unknown) => {
@@ -115,6 +118,25 @@ export function EditorSidebar({
     setEditCustomProps(merged);
   };
 
+  // Filter features based on search query
+  const filteredFeatures = useMemo(() => {
+    if (!searchQuery.trim()) return geoJsonData.features;
+    const q = searchQuery.toLowerCase().trim();
+
+    return geoJsonData.features.filter((feat, idx) => {
+      const props = (feat.properties || {}) as GisFeatureProperties;
+      const name = (props.name || `Geometri ${idx + 1}`).toLowerCase();
+      const desc = (props.description || "").toLowerCase();
+      const geomType = (feat.geometry?.type || "").toLowerCase();
+
+      if (name.includes(q) || desc.includes(q) || geomType.includes(q)) return true;
+
+      return Object.entries(props).some(
+        ([k, v]) => k.toLowerCase().includes(q) || String(v ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [geoJsonData.features, searchQuery]);
+
   return (
     <aside className="w-80 bg-slate-900 border-r border-slate-800 text-foreground flex flex-col h-full shrink-0 z-20 shadow-xl">
       {/* Header Panel */}
@@ -124,8 +146,32 @@ export function EditorSidebar({
           <h3 className="font-bold text-sm text-foreground">Daftar Bidang &amp; Layer</h3>
         </div>
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-          {geoJsonData.features.length} Item
+          {filteredFeatures.length} / {geoJsonData.features.length} Item
         </span>
+      </div>
+
+      {/* Search Input Bar */}
+      <div className="p-2.5 border-b border-slate-800 bg-slate-900/60">
+        <div className="relative flex items-center">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari bidang, deskripsi, atribut..."
+            className="pl-8 pr-7 text-xs h-8 bg-background border-border text-foreground focus-visible:ring-emerald-500"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/50"
+              title="Hapus Pencarian"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main List Scroll Area */}
@@ -138,10 +184,25 @@ export function EditorSidebar({
               <p className="text-xs font-medium">Belum ada bidang atau objek spasial.</p>
               <p className="text-[11px] text-muted-foreground/80">Gunakan toolbar peta untuk melukis polygon bidang tanah.</p>
             </div>
+          ) : filteredFeatures.length === 0 ? (
+            <div className="p-5 text-center text-muted-foreground space-y-2 border border-dashed border-border rounded-xl bg-card/40 my-3">
+              <Search className="w-6 h-6 mx-auto text-muted-foreground/60" />
+              <p className="text-xs font-semibold">Tidak ditemukan hasil pencarian.</p>
+              <p className="text-[11px] text-muted-foreground">Tidak ada bidang yang cocok dengan kata kunci &quot;{searchQuery}&quot;.</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] text-emerald-500 hover:text-emerald-400 mt-1"
+                onClick={() => setSearchQuery("")}
+              >
+                Reset Pencarian
+              </Button>
+            </div>
           ) : (
             <div className="space-y-2.5">
               <AnimatePresence initial={false}>
-                {geoJsonData.features.map((feature, idx) => {
+                {filteredFeatures.map((feature, idx) => {
                   const props = (feature.properties || {}) as GisFeatureProperties;
                   const featureId = props.id || `f-${idx}`;
                   const isEditing = editingId === featureId;
