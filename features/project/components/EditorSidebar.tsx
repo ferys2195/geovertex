@@ -217,8 +217,8 @@ export function EditorSidebar({
 
                   if (type === "Polygon" && geom.coordinates?.[0]) {
                     const latLngs = (geom.coordinates[0] as number[][]).map(([lng, lat]) => [lat, lng] as [number, number]);
-                    const area = typeof props.areaSqm === "number" ? props.areaSqm : calculatePolygonArea(latLngs);
-                    const perim = typeof props.perimeterMeters === "number" ? props.perimeterMeters : calculatePolygonPerimeter(latLngs);
+                    const area = calculatePolygonArea(latLngs);
+                    const perim = calculatePolygonPerimeter(latLngs);
                     areaStr = formatArea(area);
                     perimeterStr = formatDistance(perim);
                   } else if (type === "LineString" && geom.coordinates) {

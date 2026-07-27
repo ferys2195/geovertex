@@ -5,6 +5,7 @@ import { MapFeatureRecord, UserRole } from "@/lib/supabase/types";
 import { isDevModeAllowed } from "@/lib/utils";
 import { useProjectStore } from "../store/useProjectStore";
 import type { MapFeatureExportData, TeamMemberItem } from "../types/project.types";
+import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength } from "@/lib/gis";
 
 export function useProjectInit(projectId: string) {
   const router = useRouter();
@@ -203,14 +204,30 @@ export function useProjectInit(projectId: string) {
         const mappedFeats: MapFeatureExportData[] = featData
           .map((f: MapFeatureRecord) => {
             const parsedLatLngs = parseGeoJsonCoords(f);
+
+            let areaSqm: number | undefined = f.properties?.areaSqm;
+            let perimeterMeters: number | undefined = f.properties?.perimeterMeters;
+
+            const featType = String(f.feature_type || "");
+            if ((featType.includes("Polygon") || featType.includes("Rectangle")) && parsedLatLngs.length >= 3) {
+              areaSqm = calculatePolygonArea(parsedLatLngs);
+              perimeterMeters = calculatePolygonPerimeter(parsedLatLngs);
+            } else if (featType.includes("Line") && parsedLatLngs.length >= 2) {
+              perimeterMeters = calculateLineLength(parsedLatLngs);
+            }
+
             return {
               id: f.id,
               type: f.feature_type as unknown as MapFeatureExportData["type"],
               name: f.layer_name || "Feature",
               latLngs: parsedLatLngs,
-              properties: f.properties || {},
-              areaSqm: f.properties?.areaSqm,
-              perimeterMeters: f.properties?.perimeterMeters,
+              properties: {
+                ...f.properties,
+                areaSqm,
+                perimeterMeters,
+              },
+              areaSqm,
+              perimeterMeters,
               color: f.properties?.color || "#2563EB",
             };
           })

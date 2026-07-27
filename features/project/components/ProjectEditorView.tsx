@@ -12,6 +12,7 @@ import Link from "next/link";
 import { EditorSidebar } from "./EditorSidebar";
 import { FeatureCollection } from "geojson";
 import { GisFeatureProperties, UserRole } from "../types/project.types";
+import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength } from "@/lib/gis";
 import { useProjectStore } from "../store/useProjectStore";
 import { useProjectInit } from "../hooks/useProjectInit";
 import { useAutoSave } from "../hooks/useAutoSave";
@@ -153,13 +154,33 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
           ? props.id
           : existing?.id || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `f-${idx}-${Date.now()}`);
 
+        const finalLatLngs = latLngs.length > 0 ? latLngs : (existing?.latLngs || []);
+
+        let areaSqm: number | undefined = undefined;
+        let perimeterMeters: number | undefined = undefined;
+
+        if (type === "Polygon" && finalLatLngs.length >= 3) {
+          areaSqm = calculatePolygonArea(finalLatLngs);
+          perimeterMeters = calculatePolygonPerimeter(finalLatLngs);
+        } else if (type === "LineString" && finalLatLngs.length >= 2) {
+          perimeterMeters = calculateLineLength(finalLatLngs);
+        }
+
         return {
           id: assignedId,
           type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
           name: props.name || existing?.name || `Geometri ${idx + 1}`,
-          latLngs: latLngs.length > 0 ? latLngs : (existing?.latLngs || []),
+          latLngs: finalLatLngs,
+          areaSqm: areaSqm ?? existing?.areaSqm,
+          perimeterMeters: perimeterMeters ?? existing?.perimeterMeters,
           color: props.color || existing?.color || "#2563EB",
-          properties: { ...existing?.properties, ...props },
+          properties: {
+            ...existing?.properties,
+            ...props,
+            areaSqm: areaSqm ?? existing?.areaSqm ?? null,
+            perimeterMeters: perimeterMeters ?? existing?.perimeterMeters ?? null,
+            latLngs: finalLatLngs.map(([lat, lng]) => ({ lat, lng })),
+          },
         };
       });
 

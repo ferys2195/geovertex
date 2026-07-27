@@ -78,11 +78,11 @@ export function useAutoSave() {
               feature_type: f.type,
               geometry: geometryObj,
               properties: {
-                areaSqm: f.areaSqm || null,
-                perimeterMeters: f.perimeterMeters || null,
+                ...(f.properties || {}),
+                areaSqm: f.areaSqm ?? null,
+                perimeterMeters: f.perimeterMeters ?? null,
                 latLngs: f.latLngs.map(([lat, lng]) => ({ lat, lng })),
                 geojson: geometryObj,
-                ...f.properties,
               },
             };
           });
