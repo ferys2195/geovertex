@@ -110,6 +110,40 @@ export function MapCanvas({
     setRightClickCoords,
   });
 
+  // 5. Trigger Leaflet invalidateSize & shift Geoman controls smoothly when sidebar toggles
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    // Shift Geoman controls (.leaflet-top.leaflet-left)
+    const leftControls = mapContainerRef.current.querySelector(
+      '.leaflet-top.leaflet-left'
+    ) as HTMLElement | null;
+
+    if (leftControls) {
+      leftControls.style.transition = 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+      leftControls.style.left = isSidebarOpen ? '332px' : '10px';
+    }
+
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    map.invalidateSize();
+
+    const interval = setInterval(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 50);
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      mapInstanceRef.current?.invalidateSize();
+    }, 350);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [isSidebarOpen, isMapReady]);
+
   const handleCopyCoordinates = () => {
     const coordsToCopy = rightClickCoords || hoverCoords;
     if (!coordsToCopy) return;
@@ -149,14 +183,6 @@ export function MapCanvas({
 
   return (
     <MapContextMenu onCopyCoordinates={handleCopyCoordinates}>
-      {/* Global CSS Override to smoothly shift Geoman & Leaflet Top-Left controls when Sidebar opens */}
-      <style jsx global>{`
-        .leaflet-top.leaflet-left {
-          left: ${isSidebarOpen ? '332px' : '10px'} !important;
-          transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        }
-      `}</style>
-
       <div 
         ref={mapContainerRef} 
         className="w-full h-full z-10 font-sans"
