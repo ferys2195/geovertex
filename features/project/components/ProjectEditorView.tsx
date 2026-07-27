@@ -304,6 +304,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
             onAddPoint={handleAddPoint}
             selectedPdfFeatureId={selectedPdfFeatureId}
             onSelectPdfFeature={setSelectedPdfFeatureId}
+            onOpenExportModal={() => setIsExportOpen(true)}
           />
         )}
 

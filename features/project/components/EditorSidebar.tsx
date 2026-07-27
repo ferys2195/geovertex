@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import {
-  FileCode,
+  FileText,
   Trash2,
   Eye,
   Check,
@@ -32,6 +32,7 @@ interface EditorSidebarProps {
   onAddPoint: (lat: number, lng: number, name: string, description: string, color?: string) => void;
   selectedPdfFeatureId?: string | null;
   onSelectPdfFeature?: (id: string | null) => void;
+  onOpenExportModal?: () => void;
 }
 
 export function EditorSidebar({
@@ -42,6 +43,7 @@ export function EditorSidebar({
   onUpdateFeatureProperties,
   selectedPdfFeatureId = null,
   onSelectPdfFeature = () => {},
+  onOpenExportModal,
 }: EditorSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState<string>("");
@@ -98,7 +100,7 @@ export function EditorSidebar({
     if (!newKey.trim() || oldKey === newKey) return;
     const updated: Record<string, string> = {};
     Object.entries(editCustomProps).forEach(([k, v]) => {
-      if (k === oldKey) updated[newKey.trim()] = v;
+      if (k === oldKey) updated[newKey] = v;
       else updated[k] = v;
     });
     setEditCustomProps(updated);
@@ -111,121 +113,73 @@ export function EditorSidebar({
     setEditCustomProps(merged);
   };
 
-  // Calculate statistics
-  const totalFeatures = geoJsonData.features.length;
-  const polyFeatures = geoJsonData.features.filter((f) => f.geometry?.type === "Polygon");
-  const lineFeatures = geoJsonData.features.filter((f) => f.geometry?.type === "LineString");
-  const pointFeatures = geoJsonData.features.filter((f) => f.geometry?.type === "Point");
-
-  const totalLineLength = lineFeatures.reduce((acc, f) => {
-    if (f.geometry?.type === "LineString") {
-      return acc + calculateLineLength(f.geometry.coordinates);
-    }
-    return acc;
-  }, 0);
-
-  const totalPolygonArea = polyFeatures.reduce((acc, f) => {
-    if (f.geometry?.type === "Polygon") {
-      return acc + calculatePolygonArea(f.geometry.coordinates[0]);
-    }
-    return acc;
-  }, 0);
-
   return (
-    <aside id="sidebar-container" className="w-full lg:w-120 h-full bg-background border-r flex flex-col z-40 shrink-0 relative font-sans">
-      {/* Header Bar */}
-      <div className="bg-muted/50 px-4 py-3 border-b flex items-center justify-between">
+    <aside className="w-80 bg-slate-900 border-r border-slate-800 text-foreground flex flex-col h-full shrink-0 z-20 shadow-xl">
+      {/* Header Panel */}
+      <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-blue-500" />
-          <h2 className="font-bold text-xs text-foreground tracking-tight">Daftar Bidang &amp; Layer Spasial</h2>
+          <Layers className="w-5 h-5 text-emerald-500" />
+          <h3 className="font-bold text-sm text-foreground">Daftar Bidang &amp; Layer</h3>
         </div>
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-          {totalFeatures} Layer
+        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+          {geoJsonData.features.length} Item
         </span>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Quick Statistics Overview Card */}
-        <div className="bg-muted/30 p-3.5 rounded-xl border grid grid-cols-3 gap-2">
-          <Card className="shadow-none border-border bg-background p-2 text-center">
-            <span className="text-[10px] text-muted-foreground font-bold block uppercase tracking-wider">Poligon / Bidang</span>
-            <span className="text-base font-extrabold text-foreground mt-0.5 block">{polyFeatures.length}</span>
-            <span className="text-[9px] text-muted-foreground font-medium truncate block">{formatArea(totalPolygonArea)}</span>
-          </Card>
-          <Card className="shadow-none border-border bg-background p-2 text-center">
-            <span className="text-[10px] text-muted-foreground font-bold block uppercase tracking-wider">Polyline</span>
-            <span className="text-base font-extrabold text-foreground mt-0.5 block">{lineFeatures.length}</span>
-            <span className="text-[9px] text-muted-foreground font-medium truncate block">{formatDistance(totalLineLength)}</span>
-          </Card>
-          <Card className="shadow-none border-border bg-background p-2 text-center">
-            <span className="text-[10px] text-muted-foreground font-bold block uppercase tracking-wider">Titik</span>
-            <span className="text-base font-extrabold text-foreground mt-0.5 block">{pointFeatures.length}</span>
-            <span className="text-[9px] text-muted-foreground font-medium truncate block">Total: {totalFeatures}</span>
-          </Card>
-        </div>
-
-        {/* List of Features */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-            <span>Daftar Geometri ({totalFeatures})</span>
-            {totalFeatures === 0 && <span className="text-[10px] text-muted-foreground lowercase font-normal italic">Gunakan toolbar peta untuk menggambar</span>}
-          </h3>
-
-          {totalFeatures === 0 ? (
-            <div className="text-center py-12 px-6 bg-muted/30 border border-dashed rounded-xl space-y-2">
-              <Compass className="w-8 h-8 text-muted-foreground mx-auto stroke-[1.2]" />
-              <p className="text-xs font-bold text-foreground">Peta masih kosong.</p>
-              <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                Gunakan instrumen gambar di panel toolbar peta untuk membuat Poligon, Garis (Polyline), atau Waypoint secara interaktif.
-              </p>
+      {/* Main List Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {/* Layer / Feature Items List */}
+        <div className="space-y-2">
+          {geoJsonData.features.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground space-y-2 border border-dashed border-border rounded-xl bg-card/40 my-4">
+              <Compass className="w-8 h-8 mx-auto text-muted-foreground/60 animate-pulse" />
+              <p className="text-xs font-medium">Belum ada bidang atau objek spasial.</p>
+              <p className="text-[11px] text-muted-foreground/80">Gunakan toolbar peta untuk melukis polygon bidang tanah.</p>
             </div>
           ) : (
-            <div className="space-y-3.5 pr-1">
-              <AnimatePresence mode="popLayout">
+            <div className="space-y-2.5">
+              <AnimatePresence initial={false}>
                 {geoJsonData.features.map((feature, idx) => {
                   const props = (feature.properties || {}) as GisFeatureProperties;
                   const featureId = props.id || `f-${idx}`;
-                  const type = feature.geometry?.type;
                   const isEditing = editingId === featureId;
+                  const geom = feature.geometry;
+                  const type = geom?.type;
 
-                  // Measures calculations
+                  // Measurements
                   let areaStr = "";
                   let perimeterStr = "";
                   let lengthStr = "";
                   let posStr = "";
 
-                  if (type === "Polygon" && feature.geometry) {
-                    const coords = (feature.geometry as unknown as { coordinates: number[][][] }).coordinates[0];
-                    const areaVal = calculatePolygonArea(coords);
-                    const perimeterVal = calculatePolygonPerimeter(coords);
-                    areaStr = formatArea(areaVal);
-                    perimeterStr = formatDistance(perimeterVal);
-                  } else if (type === "LineString" && feature.geometry) {
-                    const coords = (feature.geometry as unknown as { coordinates: number[][] }).coordinates;
-                    const lenVal = calculateLineLength(coords);
-                    lengthStr = formatDistance(lenVal);
-                  } else if (type === "Point" && feature.geometry) {
-                    const coords = (feature.geometry as unknown as { coordinates: number[] }).coordinates;
+                  if (type === "Polygon" && geom.coordinates?.[0]) {
+                    const latLngs = (geom.coordinates[0] as number[][]).map(([lng, lat]) => [lat, lng] as [number, number]);
+                    const area = typeof props.areaSqm === "number" ? props.areaSqm : calculatePolygonArea(latLngs);
+                    const perim = typeof props.perimeterMeters === "number" ? props.perimeterMeters : calculatePolygonPerimeter(latLngs);
+                    areaStr = formatArea(area);
+                    perimeterStr = formatDistance(perim);
+                  } else if (type === "LineString" && geom.coordinates) {
+                    const latLngs = (geom.coordinates as number[][]).map(([lng, lat]) => [lat, lng] as [number, number]);
+                    const len = calculateLineLength(latLngs);
+                    lengthStr = formatDistance(len);
+                  } else if (type === "Point" && geom.coordinates) {
+                    const [lng, lat] = geom.coordinates as number[];
                     if (coordinateMode === "UTM") {
-                      const utm = latLngToUtm(coords[1], coords[0]);
+                      const utm = latLngToUtm(lat, lng);
                       posStr = utm.formatted;
                     } else {
-                      posStr = `${coords[1].toFixed(6)}°, ${coords[0].toFixed(6)}°`;
+                      posStr = `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`;
                     }
                   }
 
-                  const borderTheme = type === "Polygon"
-                    ? "border-l-3 border-l-emerald-500"
-                    : type === "LineString"
-                    ? "border-l-3 border-l-blue-500"
-                    : "border-l-3 border-l-amber-500";
+                  const badgeTheme =
+                    type === "Polygon"
+                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                      : type === "LineString"
+                      ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
+                      : "bg-purple-500/10 text-purple-500 border-purple-500/30";
 
-                  const badgeTheme = type === "Polygon"
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
-                    : type === "LineString"
-                    ? "bg-blue-50 text-blue-700 border-blue-200/50"
-                    : "bg-amber-50 text-amber-700 border-amber-200/50";
+                  const isPdfSelected = selectedPdfFeatureId === featureId;
 
                   return (
                     <motion.div
@@ -233,18 +187,26 @@ export function EditorSidebar({
                       layout
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className={`bg-muted/30 border rounded-lg p-3 space-y-2.5 transition-all hover:bg-muted/50 ${borderTheme}`}
+                      exit={{ opacity: 0, height: 0 }}
+                      className={`p-3 rounded-xl border transition-all ${
+                        isPdfSelected
+                          ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/30 shadow-md"
+                          : "border-border hover:border-slate-700 bg-card"
+                      }`}
                     >
-                      {/* Inner properties details */}
                       {isEditing ? (
-                        <Card className="p-3 shadow-sm border space-y-2.5">
+                        <Card className="p-3 bg-muted/30 border-primary/40 space-y-2.5">
+                          <div className="flex items-center justify-between border-b border-border pb-1.5">
+                            <span className="text-xs font-bold text-primary">Edit Atribut Layer</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">{featureId}</span>
+                          </div>
                           <div>
-                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Nama Fitur</label>
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Nama Bidang</label>
                             <Input
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
-                              className="h-7 text-xs mt-1 bg-background"
+                              className="text-xs h-7 mt-1 bg-background"
+                              placeholder="Misal: Bidang A - Pak Budi"
                             />
                           </div>
                           <div>
@@ -321,15 +283,28 @@ export function EditorSidebar({
                           </div>
                         </Card>
                       ) : (
-                        <div onClick={() => onZoomToFeature(featureId)} className="cursor-pointer group">
+                        <div
+                          onClick={() => {
+                            onZoomToFeature(featureId);
+                            onSelectPdfFeature(featureId);
+                          }}
+                          className="cursor-pointer group"
+                        >
                           {/* Header Card */}
                           <div className="flex items-start justify-between">
                             <div className="space-y-0.5">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-bold text-xs">{props.name || `Geometri ${idx + 1}`}</h4>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h4 className="font-bold text-xs text-foreground group-hover:text-emerald-400 transition-colors">
+                                  {props.name || `Geometri ${idx + 1}`}
+                                </h4>
                                 <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border ${badgeTheme}`}>
                                   {type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Point/Marker"}
                                 </span>
+                                {isPdfSelected && (
+                                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                                    Target PDF
+                                  </span>
+                                )}
                               </div>
                               {props.description && (
                                 <p className="text-[11px] text-muted-foreground line-clamp-2 italic pr-2 mt-0.5 leading-relaxed">
@@ -343,15 +318,23 @@ export function EditorSidebar({
                               <Tooltip>
                                 <TooltipTrigger render={
                                   <Button
-                                    variant={selectedPdfFeatureId === featureId ? "default" : "outline"}
+                                    variant={isPdfSelected ? "default" : "outline"}
                                     size="icon"
-                                    onClick={() => onSelectPdfFeature(selectedPdfFeatureId === featureId ? null : featureId)}
-                                    className={`w-7 h-7 ${selectedPdfFeatureId === featureId ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" : ""}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onSelectPdfFeature(featureId);
+                                      onOpenExportModal?.();
+                                    }}
+                                    className={`w-7 h-7 transition-all ${
+                                      isPdfSelected
+                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow"
+                                        : "hover:border-emerald-500 hover:text-emerald-500"
+                                    }`}
                                   >
-                                    <FileCode className="w-3.5 h-3.5" />
+                                    <FileText className="w-3.5 h-3.5" />
                                   </Button>
                                 } />
-                                <TooltipContent>{selectedPdfFeatureId === featureId ? "Terpilih untuk PDF" : "Pilih untuk PDF"}</TooltipContent>
+                                <TooltipContent>Ekspor Laporan PDF Kartografi Bidang Ini</TooltipContent>
                               </Tooltip>
 
                               <Tooltip>
@@ -359,7 +342,10 @@ export function EditorSidebar({
                                   <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => onZoomToFeature(featureId)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onZoomToFeature(featureId);
+                                    }}
                                     className="w-7 h-7"
                                   >
                                     <Eye className="w-3.5 h-3.5 text-muted-foreground" />
@@ -373,7 +359,10 @@ export function EditorSidebar({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => handleStartEditFeature(feature)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStartEditFeature(feature);
+                                    }}
                                     className="w-7 h-7 text-muted-foreground hover:text-foreground"
                                   >
                                     <Edit3 className="w-3.5 h-3.5" />
@@ -387,7 +376,10 @@ export function EditorSidebar({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => onDeleteFeature(featureId)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDeleteFeature(featureId);
+                                    }}
                                     className="w-7 h-7 text-muted-foreground hover:text-destructive"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
