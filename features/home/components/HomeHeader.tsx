@@ -12,6 +12,8 @@ import {
   LogOut,
   User as UserIcon,
   ChevronDown,
+  Menu,
+  X,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -21,6 +23,7 @@ export function HomeHeader() {
   const [userName, setUserName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -96,25 +99,28 @@ export function HomeHeader() {
     await supabase.auth.signOut();
     setUser(null);
     setIsOpen(false);
+    setIsMobileMenuOpen(false);
     router.refresh();
   };
 
   return (
-    <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-600/30">
-            <Layers className="w-6 h-6" />
+    <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+        {/* Brand Logo */}
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-600/30 shrink-0">
+            <Layers className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <span className="font-bold text-xl text-white tracking-tight">GeoVertex</span>
-            <span className="ml-2 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-widest">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="font-bold text-lg sm:text-xl text-white tracking-tight">GeoVertex</span>
+            <span className="hidden xs:inline-flex px-1.5 sm:px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-widest">
               BETA V1.0
             </span>
           </div>
-        </div>
+        </Link>
 
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-xs lg:text-sm font-medium text-slate-300">
           <a href="#sandbox" className="hover:text-white transition-colors">
             Interactive Sandbox
           </a>
@@ -129,20 +135,21 @@ export function HomeHeader() {
           </a>
         </nav>
 
-        <div className="flex items-center gap-3">
+        {/* Desktop & Mobile Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {isLoading ? (
-            <div className="h-9 w-28 bg-slate-800/60 rounded-xl animate-pulse" />
+            <div className="h-8 sm:h-9 w-20 sm:w-28 bg-slate-800/60 rounded-xl animate-pulse" />
           ) : user ? (
             <div className="relative" ref={dropdownRef}>
               <Button
                 variant="ghost"
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/90 text-slate-200 text-sm h-10 px-3.5 rounded-xl flex items-center gap-2 transition-all shadow-sm"
+                className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/90 text-slate-200 text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-3.5 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-all shadow-sm"
               >
-                <div className="w-6 h-6 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-                  <UserIcon className="w-3.5 h-3.5" />
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                  <UserIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
-                <span className="max-w-30 truncate text-xs font-medium text-slate-200">
+                <span className="max-w-[70px] xs:max-w-[100px] sm:max-w-[120px] truncate text-xs font-medium text-slate-200">
                   {userName || user.email?.split("@")[0] || "Akun Saya"}
                 </span>
                 <ChevronDown
@@ -187,24 +194,108 @@ export function HomeHeader() {
             </div>
           ) : (
             <>
-              <Link href="/login">
-                <Button
-                  variant="ghost"
-                  className="text-slate-300 hover:text-white hover:bg-slate-900 text-sm"
-                >
-                  Masuk
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/25">
-                  Mulai Gratis <ArrowRight className="w-4 h-4 ml-1.5" />
-                </Button>
-              </Link>
+              <div className="hidden sm:flex items-center gap-2">
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    className="text-slate-300 hover:text-white hover:bg-slate-900 text-xs sm:text-sm h-8 sm:h-10 px-3"
+                  >
+                    Masuk
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm h-8 sm:h-10 px-3.5 shadow-lg shadow-blue-600/25">
+                    Mulai Gratis <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Mobile-only compact button for logged out users */}
+              <div className="flex sm:hidden items-center gap-1.5">
+                <Link href="/login">
+                  <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-8 px-2.5 shadow-md shadow-blue-600/20">
+                    Mulai Gratis
+                  </Button>
+                </Link>
+              </div>
             </>
           )}
+
+          {/* Mobile Hamburger Toggle Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden text-slate-300 hover:text-white hover:bg-slate-900 h-8 w-8 sm:h-9 sm:w-9 rounded-lg shrink-0"
+            aria-label="Toggle Navigation Menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-200" />
+            ) : (
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-slate-200" />
+            )}
+          </Button>
         </div>
       </div>
+
+      {/* Mobile Navigation Menu Drawer */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-2xl px-5 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-2xl">
+          <nav className="flex flex-col space-y-1 text-xs sm:text-sm font-medium text-slate-300">
+            <a
+              href="#sandbox"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
+            >
+              Interactive Sandbox
+            </a>
+            <a
+              href="#features"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
+            >
+              Fitur Unggulan
+            </a>
+            <a
+              href="#comparison"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
+            >
+              GeoVertex vs QGIS
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
+            >
+              Harga & Paket
+            </a>
+          </nav>
+
+          <div className="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+            {!user ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full h-9 border-slate-800 bg-slate-900 text-slate-200 hover:text-white text-xs rounded-xl">
+                    Masuk
+                  </Button>
+                </Link>
+                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="w-full h-9 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-600/20">
+                    Mulai Gratis
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button className="w-full h-9 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2">
+                  <LayoutDashboard className="w-4 h-4" /> Buka Dashboard
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
-
