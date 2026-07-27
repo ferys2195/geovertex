@@ -233,6 +233,37 @@ export interface Project {
 
 ---
 
+### `features/*/store/` — State Management Terpusat (Zustand)
+
+Untuk fitur kompleks yang memiliki banyak UI state, selection, data remote, atau modal toggles:
+- **WAJIB** dipisahkan menjadi Zustand store terisolasi per fitur (contoh: `features/project/store/useProjectStore.ts`).
+- Mengeliminasi prop drilling > 2 level antar komponen anak.
+- Komponen UI mengakses state & action langsung dari store.
+
+```ts
+// ✅ BENAR — features/project/store/useProjectStore.ts
+import { create } from "zustand";
+
+export const useProjectStore = create<ProjectState>((set) => ({
+  mapFeatures: [],
+  selectedFeatureId: null,
+  setMapFeatures: (features) => set({ mapFeatures: features }),
+  setSelectedFeatureId: (id) => set({ selectedFeatureId: id }),
+}));
+```
+
+---
+
+### `features/*/hooks/` — Business Logic & Side Effects (Custom Hooks)
+
+Seluruh logika non-UI (Supabase data fetching, cloud auto-save engine, kalkulasi spasial GIS, event listener Leaflet/Geoman) **WAJIB** diekstrak ke custom hooks terisolasi di folder `hooks/`:
+- `useProjectInit`: Data fetching & initialization.
+- `useAutoSave`: Cloud persistence engine dengan debounce.
+- `useGisCalculations`: Spasial math & unit conversions.
+- `useMapEvents`: Binding event canvas/map.
+
+---
+
 ### `features/*/index.ts` — Public API Fitur
 
 Ini adalah **satu-satunya** file yang boleh di-import oleh layer luar (page, fitur lain).
