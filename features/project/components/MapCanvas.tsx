@@ -26,6 +26,9 @@ interface MapContainerProps {
   readOnly?: boolean;
   selectedPdfFeatureId?: string | null;
   onSelectPdfFeature?: (id: string | null) => void;
+  onOpenExportModal?: () => void;
+  onDeleteFeature?: (id: string) => void;
+  onEditFeature?: (id: string) => void;
 }
 
 // Map Base Layers configurations
@@ -82,7 +85,10 @@ export function MapCanvas({
   zoomToTrigger = null,
   readOnly = false,
   selectedPdfFeatureId = null,
-  onSelectPdfFeature = () => {}
+  onSelectPdfFeature = () => {},
+  onOpenExportModal,
+  onDeleteFeature,
+  onEditFeature,
 }: MapContainerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -520,7 +526,6 @@ export function MapCanvas({
       }
 
       const updatePopupContent = () => {
-        let tooltipHtml = '';
         let currentGeo: any = null;
         if (typeof layer.toGeoJSON === 'function') {
           try {
@@ -530,10 +535,15 @@ export function MapCanvas({
           }
         }
 
+        const featureId = layer._pm_temp_id;
         const name = props.name || layer.feature?.properties?.name || 'Geometri Lahan';
         const desc = props.description || layer.feature?.properties?.description || '';
 
+        let geomTypeBadge = 'POLYGON';
+        let bodyHtml = '';
+
         if (layer instanceof L.Polygon || currentGeo?.geometry?.type === 'Polygon') {
+          geomTypeBadge = 'POLYGON';
           const latlngs = layer.getLatLngs ? layer.getLatLngs() : [];
           const pts = getFlatLatLngs(latlngs);
           const coords = pts.map((p) => [p.lng, p.lat]);
@@ -542,40 +552,77 @@ export function MapCanvas({
           }
           const area = calculatePolygonArea(coords);
           const perimeter = calculatePolygonPerimeter(coords);
-          tooltipHtml = `
-            <div class="p-2 text-xs font-sans min-w-40">
-              <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
-              ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-              <hr class="my-1.5 border-zinc-200" />
-              <p class="text-xs text-emerald-600 font-extrabold">Luas: ${formatArea(area)}</p>
-              <p class="text-[11px] text-zinc-600 font-medium">Keliling: ${formatDistance(perimeter)}</p>
+          bodyHtml = `
+            <div class="bg-emerald-50/80 p-2 rounded border border-emerald-200 text-xs font-mono space-y-0.5">
+              <p class="text-emerald-700 font-extrabold text-xs m-0">Luas: ${formatArea(area)}</p>
+              <p class="text-zinc-600 font-medium text-[11px] m-0">Keliling: ${formatDistance(perimeter)}</p>
             </div>
           `;
         } else if (layer instanceof L.Polyline || currentGeo?.geometry?.type === 'LineString') {
+          geomTypeBadge = 'POLYLINE';
           const latlngs = layer.getLatLngs ? layer.getLatLngs() : [];
           const pts = getFlatLatLngs(latlngs);
           const coords = pts.map((p) => [p.lng, p.lat]);
           const length = calculateLineLength(coords);
-          tooltipHtml = `
-            <div class="p-2 text-xs font-sans min-w-40">
-              <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
-              ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-              <hr class="my-1.5 border-zinc-200" />
-              <p class="text-xs text-blue-600 font-extrabold font-mono">Panjang: ${formatDistance(length)}</p>
+          bodyHtml = `
+            <div class="bg-blue-50/80 p-2 rounded border border-blue-200 text-xs font-mono">
+              <p class="text-blue-700 font-extrabold text-xs m-0">Panjang: ${formatDistance(length)}</p>
             </div>
           `;
         } else if (layer instanceof L.Marker || currentGeo?.geometry?.type === 'Point') {
+          geomTypeBadge = 'MARKER';
           const pt = layer.getLatLng ? layer.getLatLng() : L.latLng(0, 0);
-          tooltipHtml = `
-            <div class="p-2 text-xs font-sans min-w-40">
-              <p class="font-bold text-zinc-900 text-sm mb-0.5">${name}</p>
-              ${desc ? `<p class="text-[10px] text-zinc-500 mb-1">${desc}</p>` : ''}
-              <hr class="my-1.5 border-zinc-200" />
-              <p class="text-[11px] text-zinc-700 font-mono">Lat: ${pt.lat.toFixed(6)}°</p>
-              <p class="text-[11px] text-zinc-700 font-mono">Lng: ${pt.lng.toFixed(6)}°</p>
+          bodyHtml = `
+            <div class="bg-purple-50/80 p-2 rounded border border-purple-200 text-[11px] font-mono space-y-0.5 text-zinc-700">
+              <p class="m-0">Lat: ${pt.lat.toFixed(6)}°</p>
+              <p class="m-0">Lng: ${pt.lng.toFixed(6)}°</p>
             </div>
           `;
         }
+
+        const tooltipHtml = `
+          <div class="p-2.5 text-xs font-sans min-w-[210px] space-y-2">
+            <div class="flex items-center justify-between border-b border-zinc-200 pb-1.5 gap-2">
+              <p class="font-bold text-zinc-900 text-sm truncate max-w-[130px] m-0">${name}</p>
+              <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-300 shrink-0">
+                ${geomTypeBadge}
+              </span>
+            </div>
+            ${desc ? `<p class="text-[11px] text-zinc-500 italic line-clamp-2 m-0">${desc}</p>` : ''}
+            
+            ${bodyHtml}
+
+            <div class="pt-2 border-t border-zinc-200 grid grid-cols-3 gap-1">
+              <button
+                id="popup-pdf-${featureId}"
+                type="button"
+                title="Ekspor Laporan PDF Kartografi"
+                class="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-[10px] py-1.5 px-1 rounded shadow-xs transition-colors cursor-pointer"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>PDF</span>
+              </button>
+              <button
+                id="popup-edit-${featureId}"
+                type="button"
+                title="Ubah Atribut Bidang"
+                class="flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-[10px] py-1.5 px-1 rounded shadow-xs transition-colors cursor-pointer"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <span>Edit</span>
+              </button>
+              <button
+                id="popup-del-${featureId}"
+                type="button"
+                title="Hapus Geometri Bidang"
+                class="flex items-center justify-center gap-1 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-[10px] py-1.5 px-1 rounded shadow-xs transition-colors cursor-pointer"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <span>Hapus</span>
+              </button>
+            </div>
+          </div>
+        `;
 
         if (tooltipHtml) {
           const popup = layer.getPopup();
@@ -588,6 +635,47 @@ export function MapCanvas({
       };
 
       updatePopupContent();
+
+      layer.on('popupopen', () => {
+        const featureId = layer._pm_temp_id;
+        setTimeout(() => {
+          const btnPdf = document.getElementById(`popup-pdf-${featureId}`);
+          if (btnPdf) {
+            btnPdf.onclick = (e: MouseEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelectPdfFeature(featureId);
+              onOpenExportModal?.();
+              layer.closePopup();
+            };
+          }
+
+          const btnEdit = document.getElementById(`popup-edit-${featureId}`);
+          if (btnEdit) {
+            btnEdit.onclick = (e: MouseEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelectPdfFeature(featureId);
+              onEditFeature?.(featureId);
+              layer.closePopup();
+            };
+          }
+
+          const btnDel = document.getElementById(`popup-del-${featureId}`);
+          if (btnDel) {
+            btnDel.onclick = (e: MouseEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              layer.closePopup();
+              if (window.confirm("Apakah Anda yakin ingin menghapus geometri bidang ini?")) {
+                geojsonGroupRef.current?.removeLayer(layer);
+                onDeleteFeature?.(featureId);
+                syncMapToStateRef.current?.();
+              }
+            };
+          }
+        }, 50);
+      });
 
       layer.on('click', (e: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e);

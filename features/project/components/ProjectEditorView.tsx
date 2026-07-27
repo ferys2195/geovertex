@@ -318,6 +318,12 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
             zoomToTrigger={zoomToTrigger}
             selectedPdfFeatureId={selectedPdfFeatureId}
             onSelectPdfFeature={setSelectedPdfFeatureId}
+            onOpenExportModal={() => setIsExportOpen(true)}
+            onDeleteFeature={handleDeleteFeature}
+            onEditFeature={(featureId) => {
+              if (!isSidebarOpen) toggleSidebar();
+              setSelectedPdfFeatureId(featureId);
+            }}
             readOnly={isReadOnly}
           />
         </div>
