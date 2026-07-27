@@ -25,6 +25,8 @@ export interface ProjectState {
 
   // Sync / Cloud Engine State
   saveStatus: CloudSaveStatus;
+  isAutoSaveEnabled: boolean;
+  isDirty: boolean;
 
   // UI States
   isSidebarOpen: boolean;
@@ -54,6 +56,9 @@ export interface ProjectState {
   setSelectedFeatureId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setSaveStatus: (status: CloudSaveStatus) => void;
+  toggleAutoSave: () => void;
+  markDirty: () => void;
+  clearDirty: () => void;
   setSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   toggleSidebar: () => void;
   setActiveTab: (tab: SidebarTab) => void;
@@ -76,6 +81,8 @@ const initialStoreState = {
   selectedFeatureId: null,
   deletedFeatureIds: [],
   saveStatus: "synced" as CloudSaveStatus,
+  isAutoSaveEnabled: true,
+  isDirty: false,
   isSidebarOpen: true,
   activeTab: "layers" as SidebarTab,
   coordinateMode: "UTM" as CoordinateMode,
@@ -94,12 +101,13 @@ export const useProjectStore = create<ProjectState>((set) => ({
     set({ project, currentRole, members }),
 
   setMapFeatures: (features) =>
-    set({ mapFeatures: features, saveStatus: "synced" }),
+    set({ mapFeatures: features }),
 
   addMapFeature: (feature) =>
     set((state) => ({
       mapFeatures: [...state.mapFeatures, feature],
       saveStatus: "unsaved",
+      isDirty: true,
     })),
 
   updateMapFeature: (id, updated) =>
@@ -108,6 +116,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
         f.id === id ? { ...f, ...updated } : f
       ),
       saveStatus: "unsaved",
+      isDirty: true,
     })),
 
   deleteMapFeature: (id) =>
@@ -116,6 +125,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
       deletedFeatureIds: [...state.deletedFeatureIds, id],
       selectedFeatureId: state.selectedFeatureId === id ? null : state.selectedFeatureId,
       saveStatus: "unsaved",
+      isDirty: true,
     })),
 
   setSelectedFeatureId: (id) => set({ selectedFeatureId: id }),
@@ -123,6 +133,13 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setLoading: (loading) => set({ loading }),
 
   setSaveStatus: (saveStatus) => set({ saveStatus }),
+
+  toggleAutoSave: () =>
+    set((state) => ({ isAutoSaveEnabled: !state.isAutoSaveEnabled })),
+
+  markDirty: () => set({ isDirty: true, saveStatus: "unsaved" }),
+
+  clearDirty: () => set({ isDirty: false, saveStatus: "synced" }),
 
   setSidebarOpen: (open) =>
     set((state) => ({

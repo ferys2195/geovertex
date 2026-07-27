@@ -9,17 +9,19 @@ export function useAutoSave() {
   const mapFeatures = useProjectStore((state) => state.mapFeatures);
   const deletedFeatureIds = useProjectStore((state) => state.deletedFeatureIds);
   const loading = useProjectStore((state) => state.loading);
+  const isAutoSaveEnabled = useProjectStore((state) => state.isAutoSaveEnabled);
+  const isDirty = useProjectStore((state) => state.isDirty);
   const setSaveStatus = useProjectStore((state) => state.setSaveStatus);
   const setMapFeatures = useProjectStore((state) => state.setMapFeatures);
   const clearDeletedFeatureIds = useProjectStore((state) => state.clearDeletedFeatureIds);
+  const clearDirty = useProjectStore((state) => state.clearDirty);
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isFirstRender = useRef(true);
 
   const saveFeaturesToCloud = useCallback(
     async (featuresToSave: MapFeatureExportData[], idsToDelete: string[]) => {
       if (!project || !projectId || projectId.startsWith("demo-proj") || loading) {
-        setSaveStatus("synced");
+        clearDirty();
         return;
       }
 
@@ -112,7 +114,7 @@ export function useAutoSave() {
           }
         }
 
-        setSaveStatus("synced");
+        clearDirty();
       } catch (err) {
         console.error("Cloud Auto-Save error:", err);
         setSaveStatus("unsaved");
@@ -124,19 +126,17 @@ export function useAutoSave() {
       loading,
       setSaveStatus,
       clearDeletedFeatureIds,
+      clearDirty,
       mapFeatures,
       setMapFeatures,
     ]
   );
 
   useEffect(() => {
-    // Skip auto-save trigger on initial load
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    // Only auto-save if auto-save setting is enabled AND there are unsaved changes (isDirty === true)
+    if (!isAutoSaveEnabled || !isDirty || loading) {
       return;
     }
-
-    if (loading) return;
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -151,5 +151,5 @@ export function useAutoSave() {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [mapFeatures, deletedFeatureIds, loading, saveFeaturesToCloud]);
+  }, [mapFeatures, deletedFeatureIds, loading, isAutoSaveEnabled, isDirty, saveFeaturesToCloud]);
 }
