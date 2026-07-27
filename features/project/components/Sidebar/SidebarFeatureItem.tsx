@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { FileText, Eye, Edit3, Trash2 } from 'lucide-react';
+import { FileText, Eye, Edit3, Trash2, Copy, Check } from 'lucide-react';
 import { Feature } from 'geojson';
 import { CoordinateMode, GisFeatureProperties } from '@/lib/types';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance, latLngToUtm } from '@/lib/gis';
@@ -62,11 +62,51 @@ export function SidebarFeatureItem({
   onRenameCustomPropKey,
   onApplyTemplate,
 }: SidebarFeatureItemProps) {
+  const [copied, setCopied] = useState(false);
   const props = (feature.properties || {}) as GisFeatureProperties;
   const featureId = props.id || `f-${idx}`;
   const isEditing = editingId === featureId;
   const geom = feature.geometry;
   const type = geom?.type;
+
+  const handleCopyCoordinates = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!geom) return;
+
+    let textToCopy = "";
+    if (geom.type === "Point" && geom.coordinates) {
+      const [lng, lat] = geom.coordinates as number[];
+      textToCopy = coordinateMode === "UTM"
+        ? latLngToUtm(lat, lng).formatted
+        : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } else if (geom.type === "LineString" && geom.coordinates) {
+      const coords = geom.coordinates as number[][];
+      textToCopy = coords
+        .map(([lng, lat]) =>
+          coordinateMode === "UTM"
+            ? latLngToUtm(lat, lng).formatted
+            : `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        )
+        .join("\n");
+    } else if (geom.type === "Polygon" && geom.coordinates?.[0]) {
+      const ring = geom.coordinates[0] as number[][];
+      textToCopy = ring
+        .map(([lng, lat]) =>
+          coordinateMode === "UTM"
+            ? latLngToUtm(lat, lng).formatted
+            : `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        )
+        .join("\n");
+    } else {
+      textToCopy = JSON.stringify((geom as any).coordinates || {});
+    }
+
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Measurements calculation
   let areaStr = "";
@@ -185,6 +225,24 @@ export function SidebarFeatureItem({
                 </Button>
               } />
               <TooltipContent>Ekspor Laporan PDF Kartografi Bidang Ini</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyCoordinates}
+                  className={`w-7 h-7 transition-colors ${
+                    copied
+                      ? "border-emerald-500 text-emerald-500 bg-emerald-500/10"
+                      : "hover:border-slate-500 hover:text-foreground"
+                  }`}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </Button>
+              } />
+              <TooltipContent>{copied ? "Koordinat Disalin!" : "Salin Koordinat Geometri"}</TooltipContent>
             </Tooltip>
 
             <Tooltip>
