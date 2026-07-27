@@ -20,7 +20,8 @@ alwaysApply: true
 
 ## Batasan Ukuran Kode & Lebar Baris (Maintainability Standards)
 
-> **PRINSIP UTAMA AI**: Refactoring HANYA bertugas melakukan breakdown/modularisasi kode tanpa mengubah fungsi, tampilan visual, atau perilaku UI yang sudah ada.
+> **PRINSIP UTAMA REFACTORING**:
+> Refactoring ini bersifat **pure code breakdown** (memecah kode menjadi bagian-bagian kecil). **TIDAK ADA** perubahan tampilan visual, warna, layout, fitur, maupun penambahan/pengurangan fungsi. Setelah refactoring selesai, seluruh fungsionalitas aplikasi **HARUS BERJALAN 100% IDENTIK** seperti saat ini (*Zero Regression*).
 
 Dalam ekosistem Next.js (yang berbasis React, TypeScript/JavaScript), konvensi batasan baris kode diatur secara ketat namun fleksibel menggunakan kombinasi ESLint dan Prettier. Berikut adalah batasan maksimal yang ideal untuk proyek Next.js Anda agar mudah dipelihara (maintainable):
 
