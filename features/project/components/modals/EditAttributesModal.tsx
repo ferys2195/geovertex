@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit3, Plus, Trash2, Check, Sparkles, Sliders } from "lucide-react";
+import { Edit3, Plus, Trash2, Check, Sparkles, Sliders, ChevronDown } from "lucide-react";
 import { GisFeatureProperties } from "@/lib/types";
 import { TEMPLATES } from "@/lib/templates";
 
@@ -38,6 +38,7 @@ export function EditAttributesModal({
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#3b82f6");
   const [customProps, setCustomProps] = useState<Record<string, string>>({});
+  const [isPresetOpen, setIsPresetOpen] = useState(false);
 
   useEffect(() => {
     if (!feature || !isOpen) return;
@@ -48,12 +49,14 @@ export function EditAttributesModal({
     setColor(feature.color || (props.color as string) || "#3b82f6");
 
     const custom: Record<string, string> = {};
+    const IGNORED_KEYS = ["id", "name", "description", "color", "areaSqm", "perimeterMeters", "geojson", "latlngs", "latLngs", "geometry", "type", "latlng", "latLng", "gpxType"];
     Object.entries(props).forEach(([k, v]) => {
-      if (!["id", "name", "description", "color", "areaSqm", "perimeterMeters"].includes(k)) {
+      if (!IGNORED_KEYS.includes(k) && typeof v !== "object") {
         custom[k] = String(v ?? "");
       }
     });
     setCustomProps(custom);
+    setIsPresetOpen(false);
   }, [feature, isOpen]);
 
   if (!feature) return null;
@@ -107,8 +110,8 @@ export function EditAttributesModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg bg-background border-border text-foreground shadow-2xl">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="sm:max-w-2xl w-[92vw] max-h-[90vh] bg-background border-border text-foreground shadow-2xl flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Sliders className="w-5 h-5 text-blue-500" />
@@ -119,7 +122,7 @@ export function EditAttributesModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-3 text-xs max-h-[65vh] overflow-y-auto pr-1">
+          <div className="space-y-4 pt-3 text-xs flex-1 max-h-[78vh] overflow-y-auto pr-1.5">
             {/* Nama Bidang */}
             <div>
               <label className="block font-semibold text-foreground mb-1">Nama Bidang / Geometri</label>
@@ -169,34 +172,59 @@ export function EditAttributesModal({
             </div>
 
             {/* Custom Properties Manager */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
-                <label className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Custom Properties
+            <div className="space-y-2.5 pt-2 border-t border-border">
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-semibold text-foreground flex items-center gap-1.5 text-sm">
+                  <Sparkles className="w-4 h-4 text-amber-500" /> Custom Properties
                 </label>
                 <div className="flex gap-1.5">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={isPresetOpen ? "secondary" : "outline"}
                     size="sm"
-                    className="h-6 text-[10px] px-2"
-                    onClick={() => handleApplyTemplate("surat_tanah")}
+                    className="h-7 text-xs px-2.5 flex items-center gap-1"
+                    onClick={() => setIsPresetOpen(!isPresetOpen)}
                   >
-                    + Preset Surat Tanah
+                    + Preset Atribut <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform ${isPresetOpen ? "rotate-180" : ""}`} />
                   </Button>
+
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-6 text-[10px] px-2"
+                    className="h-7 text-xs px-2.5"
                     onClick={handleAddProp}
                   >
-                    <Plus className="w-3 h-3 mr-1" /> Tambah Property
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Tambah Property
                   </Button>
                 </div>
               </div>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {/* Panel Preset Atribut yang expandable */}
+              {isPresetOpen && (
+                <div className="p-2.5 bg-muted/40 rounded-lg border border-border space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Klik preset di bawah untuk menambahkan grup atribut:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(TEMPLATES).map(([key, tmpl]) => (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs px-2.5 bg-background hover:bg-primary/10 hover:border-primary/50 text-foreground transition-colors flex items-center gap-1.5 shadow-sm"
+                        onClick={() => handleApplyTemplate(key as keyof typeof TEMPLATES)}
+                      >
+                        <Plus className="w-3 h-3 text-emerald-500" />
+                        <span>{tmpl.name}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
                 {Object.entries(customProps).map(([k, v], i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Input
@@ -224,7 +252,7 @@ export function EditAttributesModal({
                 ))}
                 {Object.keys(customProps).length === 0 && (
                   <p className="text-[11px] text-muted-foreground italic text-center py-2 border border-dashed border-border rounded-md">
-                    Belum ada custom properties. Klik &quot;Preset Surat Tanah&quot; atau &quot;Tambah Property&quot; untuk menambahkan atribut.
+                    Belum ada custom properties. Klik &quot;+ Preset Atribut&quot; atau &quot;Tambah Property&quot; untuk menambahkan atribut.
                   </p>
                 )}
               </div>

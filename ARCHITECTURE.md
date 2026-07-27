@@ -18,6 +18,23 @@ alwaysApply: true
 
 ---
 
+## Batasan Ukuran Kode & Lebar Baris (Maintainability Standards)
+
+> **PRINSIP UTAMA REFACTORING**:
+> Refactoring ini bersifat **pure code breakdown** (memecah kode menjadi bagian-bagian kecil). **TIDAK ADA** perubahan tampilan visual, warna, layout, fitur, maupun penambahan/pengurangan fungsi. Setelah refactoring selesai, seluruh fungsionalitas aplikasi **HARUS BERJALAN 100% IDENTIK** seperti saat ini (*Zero Regression*).
+
+Dalam ekosistem Next.js (yang berbasis React, TypeScript/JavaScript), konvensi batasan baris kode diatur secara ketat namun fleksibel menggunakan kombinasi ESLint dan Prettier. Berikut adalah batasan maksimal yang ideal untuk proyek Next.js Anda agar mudah dipelihara (maintainable):
+
+### 1. Batasan Baris untuk Komponen & File Next.js
+- **Komponen Halaman (Pages/App Router)**: Maksimal 150 – 250 baris per file. File page atau layout Next.js sebaiknya hanya mengatur struktur makro (layouting, data fetching, metadata) dan mendelegasikan visual ke komponen kecil.
+- **Komponen UI (Reusable Components)**: Maksimal 50 – 100 baris per file. Jika sebuah komponen JSX sudah memiliki terlalu banyak conditional rendering (banyak percabangan if atau ternary operator), segera pecah menjadi sub-komponen.
+- **Fungsi Utilitas (Utils/Hooks)**: Maksimal 30 – 50 baris per fungsi.
+
+### 2. Standar Lebar Baris (Print Width)
+- **Rekomendasi**: Maksimal 80 atau 100 karakter per baris secara horizontal. Batasan ini sangat krusial di Next.js karena penulisan Tailwind CSS yang panjang atau inline types di TypeScript sering membuat kode melebar ke kanan.
+
+---
+
 ## Alur Data (WAJIB dipatuhi)
 
 ```
@@ -81,6 +98,50 @@ features/                       # SEMUA logic & UI per fitur/halaman
 │   ├── index.ts
 │   └── components/
 │       └── AboutContent.tsx
+├── project/                    # Fitur: GIS Project Editor (Modular Architecture)
+│   ├── index.ts                # PUBLIC API — Satu-satunya entrypoint export keluar
+│   ├── types/                  # Type definitions per domain
+│   │   ├── layer.types.ts
+│   │   ├── gis.types.ts
+│   │   ├── export.types.ts
+│   │   └── project.types.ts
+│   ├── utils/                  # Utility functions murni & kalkulasi GIS
+│   │   ├── gisCalculations.ts
+│   │   ├── utmConverter.ts
+│   │   ├── exportFormatters.ts
+│   │   └── styleHelpers.ts
+│   ├── hooks/                  # Custom React hooks (logic reusable)
+│   │   ├── useAutoSave.ts
+│   │   ├── useProjectInit.ts
+│   │   ├── useGisCalculations.ts
+│   │   ├── useLayerManagement.ts
+│   │   └── useMapEvents.ts
+│   ├── store/                  # Zustand state management
+│   │   └── useProjectStore.ts
+│   └── components/             # Granular UI components (maks 50-100 baris/file)
+│       ├── ProjectEditorView.tsx
+│       ├── EditorSidebar.tsx
+│       ├── MapCanvas.tsx
+│       ├── EditorHeader/
+│       │   ├── EditorHeader.tsx
+│       │   ├── ProjectTitleBar.tsx
+│       │   ├── AutoSaveStatus.tsx
+│       │   └── ActionButtons.tsx
+│       ├── Sidebar/
+│       │   ├── LayerList.tsx
+│       │   ├── LayerItem.tsx
+│       │   ├── LayerPropertiesEdit.tsx
+│       │   └── LayerQuickAdd.tsx
+│       ├── MapCanvas/
+│       │   ├── MapDrawControls.tsx
+│       │   └── MapContextMenu.tsx
+│       └── modals/
+        ├── ExportModal.tsx
+        ├── ExportFormatSelector.tsx
+        ├── ExportPdfOptionsForm.tsx
+        ├── ShareModal.tsx
+        ├── EditAttributesModal.tsx
+        └── UtmConverterDialog.tsx
 ├── projects/                   # Fitur: Projects
 │   ├── index.ts
 │   ├── components/

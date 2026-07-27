@@ -1,51 +1,39 @@
-export const SURAT_TANAH_TEMPLATE: Record<string, string> = {
-  // === Identitas Pemilik ===
-  pemilik_nama: '',
-  pemilik_ttl: '',
-  pemilik_nik: '',
-  pemilik_jenis_kelamin: '',
-  pemilik_alamat: '',
-  pemilik_pekerjaan: '',
-  pemilik_kewarganegaraan: 'Indonesia',
-
-  // === RT / RW ===
-  rt: '',
-  rw: '',
-  nama_rt: '',
-
-  // === Pejabat ===
-  pejabat_kades: '',
-  pejabat_camat: '',
-  pejabat_nip_camat: '',
-  pejabat_pangkat: '',
-  pejabat_kasi_pem: '',
-  pejabat_petugas_pengukur: '',
-  pejabat_mantir: '',
-
-  // === Tanggal ===
-  tgl_permohonan: '',
-  tgl_surat_tugas: '',
-  tgl_pengukuran: '',
-  meta_is_hgu: 'false', // Default to string representation for simple input
-
-  // === Tanah ===
-  tanah_letak: '',
-  tanah_panjang: '',
-  tanah_lebar: '',
-  tanah_luas: '',
-  tanah_peruntukan: '',
-  tanah_riwayat: '',
-
-  // === Batas ===
-  batas_utara: '',
-  batas_timur: '',
-  batas_selatan: '',
-  batas_barat: '',
-};
-
 export const TEMPLATES = {
-  'surat_tanah': {
-    name: 'Template Surat Tanah',
-    data: SURAT_TANAH_TEMPLATE
-  }
-};
+  legalitas: {
+    name: 'Legalitas & Hak Tanah',
+    data: {
+      no_sertifikat: '',
+      nama_pemilik: '',
+      jenis_hak: 'SHM',
+      tanggal_terbit: '',
+      nib: '',
+    },
+  },
+  perpajakan: {
+    name: 'Perpajakan & Valuasi',
+    data: {
+      nop_pbb: '',
+      njop_per_m2: '',
+      est_nilai_lahan: '',
+    },
+  },
+  zonasi: {
+    name: 'Tata Ruang & Zonasi',
+    data: {
+      zonasi: '',
+      kdb_persen: '',
+      klb_ratio: '',
+      peruntukan: '',
+    },
+  },
+  survei: {
+    name: 'Survei Lapangan',
+    data: {
+      penggunaan_lahan: '',
+      kondisi_fisik: '',
+      akses_jalan: '',
+      surveyor: '',
+    },
+  },
+} as const;
+
