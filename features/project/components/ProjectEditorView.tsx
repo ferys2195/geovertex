@@ -1,21 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ExportModal } from "./modals/ExportModal";
 import { ShareModal } from "./modals/ShareModal";
 import { EditAttributesModal } from "./modals/EditAttributesModal";
-import { MapFeatureExportData } from "@/lib/export/pdfExporter";
-import { Button } from "@/components/ui/button";
-import { Share2, Download, Cloud, CloudOff, Loader2, ArrowLeft, PanelLeft } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { EditorSidebar } from "./EditorSidebar";
-import { FeatureCollection } from "geojson";
 import { GisFeatureProperties, UserRole } from "../types/project.types";
-import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength } from "@/lib/gis";
 import { useProjectStore } from "../store/useProjectStore";
 import { useProjectInit } from "../hooks/useProjectInit";
 import { useAutoSave } from "../hooks/useAutoSave";
+import { useGeoJsonSync } from "../hooks/useGeoJsonSync";
+import { EditorHeader } from "./EditorHeader/EditorHeader";
 import { createClient } from "@/lib/supabase/client";
 
 const DynamicMapCanvas = dynamic(() => import("./MapCanvas").then((mod) => mod.MapCanvas), {
@@ -36,6 +33,8 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   useProjectInit(projectId);
   useAutoSave();
 
+  const { geoJsonData, handleUpdateGeoJSON } = useGeoJsonSync();
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
 
@@ -47,7 +46,6 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   const saveStatus = useProjectStore((state) => state.saveStatus);
   const isAutoSaveEnabled = useProjectStore((state) => state.isAutoSaveEnabled);
   const toggleAutoSave = useProjectStore((state) => state.toggleAutoSave);
-  const markDirty = useProjectStore((state) => state.markDirty);
   const isSidebarOpen = useProjectStore((state) => state.isSidebarOpen);
   const toggleSidebar = useProjectStore((state) => state.toggleSidebar);
   const coordinateMode = useProjectStore((state) => state.coordinateMode);
@@ -63,43 +61,9 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   const deleteMapFeature = useProjectStore((state) => state.deleteMapFeature);
   const updateMapFeature = useProjectStore((state) => state.updateMapFeature);
   const addMapFeature = useProjectStore((state) => state.addMapFeature);
-  const setMapFeatures = useProjectStore((state) => state.setMapFeatures);
   const setProjectData = useProjectStore((state) => state.setProjectData);
 
   const supabase = createClient();
-
-  const geoJsonData: FeatureCollection = useMemo(() => ({
-    type: "FeatureCollection",
-    features: mapFeatures.map((f) => {
-      let geometry: unknown;
-      const typeLower = (f.type || "").toString().toLowerCase();
-
-      if (typeLower.includes("polygon") || typeLower.includes("rect")) {
-        const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
-        if (coords.length > 0 && (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1])) {
-          coords.push(coords[0]);
-        }
-        geometry = { type: "Polygon", coordinates: [coords] };
-      } else if (typeLower.includes("line") || typeLower.includes("path") || typeLower.includes("string")) {
-        geometry = { type: "LineString", coordinates: f.latLngs.map(([lat, lng]) => [lng, lat]) };
-      } else {
-        const pt = f.latLngs[0] || [0, 0];
-        geometry = { type: "Point", coordinates: [pt[1], pt[0]] };
-      }
-
-      return {
-        type: "Feature",
-        geometry: geometry as any,
-        properties: {
-          id: f.id,
-          name: f.name,
-          description: f.properties?.description || "",
-          color: f.color || "#2563EB",
-          ...f.properties,
-        },
-      };
-    }),
-  }), [mapFeatures]);
 
   const handleZoomToFeature = (featureId: string) => {
     setZoomToTrigger({ id: featureId, time: Date.now() });
@@ -127,64 +91,6 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
       color: color || "#DC2626",
       properties: { id, name, description },
     });
-  };
-
-  const handleUpdateGeoJSON = (data: FeatureCollection) => {
-    markDirty();
-    const converted: MapFeatureExportData[] = data.features
-      .filter((feat) => feat && feat.geometry)
-      .map((feat, idx) => {
-        const props = (feat.properties || {}) as GisFeatureProperties;
-        const type = feat.geometry.type;
-
-        let latLngs: [number, number][] = [];
-        if (type === "Polygon") {
-          const coords = (feat.geometry as unknown as { coordinates: number[][][] }).coordinates[0] || [];
-          latLngs = coords.map(([lng, lat]) => [Number(lat), Number(lng)]);
-        } else if (type === "LineString") {
-          const coords = (feat.geometry as unknown as { coordinates: number[][] }).coordinates || [];
-          latLngs = coords.map(([lng, lat]) => [Number(lat), Number(lng)]);
-        } else if (type === "Point") {
-          const pt = (feat.geometry as unknown as { coordinates: number[] }).coordinates || [0, 0];
-          latLngs = [[Number(pt[1]), Number(pt[0])]];
-        }
-
-        const existing = mapFeatures.find((f) => f.id === props.id);
-        const assignedId = (props.id && props.id !== "undefined")
-          ? props.id
-          : existing?.id || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `f-${idx}-${Date.now()}`);
-
-        const finalLatLngs = latLngs.length > 0 ? latLngs : (existing?.latLngs || []);
-
-        let areaSqm: number | undefined = undefined;
-        let perimeterMeters: number | undefined = undefined;
-
-        if (type === "Polygon" && finalLatLngs.length >= 3) {
-          areaSqm = calculatePolygonArea(finalLatLngs);
-          perimeterMeters = calculatePolygonPerimeter(finalLatLngs);
-        } else if (type === "LineString" && finalLatLngs.length >= 2) {
-          perimeterMeters = calculateLineLength(finalLatLngs);
-        }
-
-        return {
-          id: assignedId,
-          type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
-          name: props.name || existing?.name || `Geometri ${idx + 1}`,
-          latLngs: finalLatLngs,
-          areaSqm: areaSqm ?? existing?.areaSqm,
-          perimeterMeters: perimeterMeters ?? existing?.perimeterMeters,
-          color: props.color || existing?.color || "#2563EB",
-          properties: {
-            ...existing?.properties,
-            ...props,
-            areaSqm: areaSqm ?? existing?.areaSqm ?? null,
-            perimeterMeters: perimeterMeters ?? existing?.perimeterMeters ?? null,
-            latLngs: finalLatLngs.map(([lat, lng]) => ({ lat, lng })),
-          },
-        };
-      });
-
-    setMapFeatures(converted);
   };
 
   const handleInviteMember = async (email: string, role: UserRole): Promise<boolean> => {
@@ -244,96 +150,18 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-slate-950 font-sans">
-      {/* Top Navbar */}
-      <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-slate-400 hover:text-white transition-colors" title="Kembali ke Dashboard">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="h-4 w-px bg-slate-800" />
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className={`h-8 w-8 text-slate-300 hover:text-white ${isSidebarOpen ? "bg-slate-800 text-blue-400" : ""}`}
-            title="Buka/Tutup Sidebar Panel"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <h1 className="font-bold text-sm text-white">{project?.title || "Proyek Pemetaan"}</h1>
-            <span
-              className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
-                currentRole === "owner"
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                  : currentRole === "editor"
-                  ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                  : "bg-slate-700 text-slate-300"
-              }`}
-            >
-              Role: {currentRole}
-            </span>
-          </div>
-        </div>
-
-        {/* Status Cloud & Action Buttons */}
-        <div className="flex items-center gap-3">
-          {/* Auto-Save Settings Toggle */}
-          <button
-            type="button"
-            onClick={toggleAutoSave}
-            title={isAutoSaveEnabled ? "Auto-Save Aktif (Klik untuk menonaktifkan)" : "Auto-Save Non-Aktif (Klik untuk mengaktifkan)"}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-              isAutoSaveEnabled
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300"
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${isAutoSaveEnabled ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
-            <span className="font-semibold text-[11px]">
-              Auto-Save: {isAutoSaveEnabled ? "ON" : "OFF"}
-            </span>
-          </button>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
-            {saveStatus === "saving" ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                <span>Menyimpan ke Cloud...</span>
-              </>
-            ) : saveStatus === "synced" ? (
-              <>
-                <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Tersimpan di Cloud</span>
-              </>
-            ) : (
-              <>
-                <CloudOff className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-amber-400">Belum Tersimpan</span>
-              </>
-            )}
-          </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsShareOpen(true)}
-            className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-white text-xs h-8"
-          >
-            <Share2 className="w-3.5 h-3.5 mr-1.5 text-blue-400" /> Kolaborasi Tim
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setIsExportOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 font-semibold"
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" /> Ekspor PDF &amp; Data
-          </Button>
-        </div>
-      </header>
+      {/* Top Navbar Header */}
+      <EditorHeader
+        projectTitle={project?.title}
+        currentRole={currentRole}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={toggleSidebar}
+        isAutoSaveEnabled={isAutoSaveEnabled}
+        onToggleAutoSave={toggleAutoSave}
+        saveStatus={saveStatus}
+        onOpenShareModal={() => setIsShareOpen(true)}
+        onOpenExportModal={() => setIsExportOpen(true)}
+      />
 
       {/* Main Content Body: Sidebar + Map Canvas Container */}
       <div className="flex-1 relative overflow-hidden flex flex-row">
@@ -409,3 +237,5 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
     </div>
   );
 }
+
+export default ProjectEditorView;
