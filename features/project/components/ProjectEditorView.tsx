@@ -167,22 +167,31 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
       <div className="flex-1 relative overflow-hidden flex flex-row">
         {/* Sidebar Panel */}
         {isSidebarOpen && (
-          <EditorSidebar
-            geoJsonData={geoJsonData}
-            onUpdateGeoJSON={handleUpdateGeoJSON}
-            coordinateMode={coordinateMode}
-            onZoomToFeature={handleZoomToFeature}
-            onDeleteFeature={handleDeleteFeature}
-            onUpdateFeatureProperties={handleUpdateFeatureProperties}
-            onAddPoint={handleAddPoint}
-            selectedPdfFeatureId={selectedPdfFeatureId}
-            onSelectPdfFeature={setSelectedPdfFeatureId}
-            onOpenExportModal={() => setIsExportOpen(true)}
-            onEditFeature={(featureId) => {
-              setEditingFeatureId(featureId);
-              setIsEditModalOpen(true);
-            }}
-          />
+          <>
+            {/* Backdrop overlay for mobile screen */}
+            <div
+              className="md:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-xs"
+              onClick={toggleSidebar}
+            />
+            <div className="absolute md:relative left-0 top-0 bottom-0 z-40 h-full">
+              <EditorSidebar
+                geoJsonData={geoJsonData}
+                onUpdateGeoJSON={handleUpdateGeoJSON}
+                coordinateMode={coordinateMode}
+                onZoomToFeature={handleZoomToFeature}
+                onDeleteFeature={handleDeleteFeature}
+                onUpdateFeatureProperties={handleUpdateFeatureProperties}
+                onAddPoint={handleAddPoint}
+                selectedPdfFeatureId={selectedPdfFeatureId}
+                onSelectPdfFeature={setSelectedPdfFeatureId}
+                onOpenExportModal={() => setIsExportOpen(true)}
+                onEditFeature={(featureId) => {
+                  setEditingFeatureId(featureId);
+                  setIsEditModalOpen(true);
+                }}
+              />
+            </div>
+          </>
         )}
 
         {/* Map Canvas */}
