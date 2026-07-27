@@ -393,11 +393,17 @@ export function useMapLayerSync({
     layers.forEach((layer: any) => {
       if (layer.getLayers) {
         layer.getLayers().forEach((subLayer: any) => {
-          if (subLayer._pm_temp_id === zoomToTrigger.id) {
+          if (
+            subLayer._pm_temp_id === zoomToTrigger.id ||
+            subLayer.feature?.properties?.id === zoomToTrigger.id
+          ) {
             targetLayer = subLayer;
           }
         });
-      } else if (layer._pm_temp_id === zoomToTrigger.id) {
+      } else if (
+        layer._pm_temp_id === zoomToTrigger.id ||
+        layer.feature?.properties?.id === zoomToTrigger.id
+      ) {
         targetLayer = layer;
       }
     });
@@ -405,12 +411,12 @@ export function useMapLayerSync({
     if (targetLayer) {
       setSelectedFeatureId(zoomToTrigger.id);
       if (typeof targetLayer.getLatLng === 'function' && !(targetLayer instanceof L.Polygon || targetLayer instanceof L.Polyline)) {
-        map.setView(targetLayer.getLatLng(), 16, { animate: true });
+        map.flyTo(targetLayer.getLatLng(), 16, { animate: true, duration: 1.2 });
         targetLayer.openPopup?.();
       } else if (typeof targetLayer.getBounds === 'function') {
         const bounds = targetLayer.getBounds();
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
+          map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16, duration: 1.2 });
           targetLayer.openPopup?.();
         }
       }

@@ -101,8 +101,6 @@ export function SidebarFeatureItem({
       ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
       : "bg-purple-500/10 text-purple-500 border-purple-500/30";
 
-  const isPdfSelected = selectedPdfFeatureId === featureId;
-
   return (
     <motion.div
       key={featureId}
@@ -110,11 +108,7 @@ export function SidebarFeatureItem({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0 }}
-      className={`p-3 rounded-xl border transition-all ${
-        isPdfSelected
-          ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/30 shadow-md"
-          : "border-border hover:border-slate-700 bg-card"
-      }`}
+      className="p-3 rounded-xl border transition-all border-border hover:border-slate-700 bg-card"
     >
       {isEditing ? (
         <SidebarFeatureEditForm
@@ -138,112 +132,27 @@ export function SidebarFeatureItem({
         <div
           onClick={() => {
             onZoomToFeature(featureId);
-            onSelectPdfFeature(featureId);
           }}
           className="cursor-pointer group"
         >
-          {/* Header Card */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h4 className="font-bold text-xs text-foreground group-hover:text-emerald-400 transition-colors">
-                  {props.name || `Geometri ${idx + 1}`}
-                </h4>
-                <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border ${badgeTheme}`}>
-                  {type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Point/Marker"}
-                </span>
-                {isPdfSelected && (
-                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                    Target PDF
-                  </span>
-                )}
-              </div>
-              {props.description && (
-                <p className="text-[11px] text-muted-foreground line-clamp-2 italic pr-2 mt-0.5 leading-relaxed">
-                  {props.description}
-                </p>
-              )}
-            </div>
-
-            {/* Actions icons */}
-            <div className="flex items-center gap-1 shrink-0">
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant={isPdfSelected ? "default" : "outline"}
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectPdfFeature(featureId);
-                      onOpenExportModal?.();
-                    }}
-                    className={`w-7 h-7 transition-all ${
-                      isPdfSelected
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow"
-                        : "hover:border-emerald-500 hover:text-emerald-500"
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                  </Button>
-                } />
-                <TooltipContent>Ekspor Laporan PDF Kartografi Bidang Ini</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onZoomToFeature(featureId);
-                    }}
-                    className="w-7 h-7"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                  </Button>
-                } />
-                <TooltipContent>Fokus Peta</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditFeature?.(featureId);
-                    }}
-                    className="w-7 h-7 text-muted-foreground hover:text-foreground"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </Button>
-                } />
-                <TooltipContent>Ubah Atribut</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteFeature(featureId);
-                    }}
-                    className="w-7 h-7 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                } />
-                <TooltipContent>Hapus Geometri</TooltipContent>
-              </Tooltip>
-            </div>
+          {/* Header Card: Nama & Jenis Geometri sejajar flex justify-between items-center */}
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="font-bold text-xs text-foreground group-hover:text-emerald-400 transition-colors truncate">
+              {props.name || `Geometri ${idx + 1}`}
+            </h4>
+            <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border shrink-0 ${badgeTheme}`}>
+              {type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Point/Marker"}
+            </span>
           </div>
 
+          {props.description && (
+            <p className="text-[11px] text-muted-foreground line-clamp-2 italic mt-1 leading-relaxed">
+              {props.description}
+            </p>
+          )}
+
           {/* Quick Measurements Display */}
-          <div className="mt-2.5 pt-2 border-t border-border/60 flex flex-wrap items-center justify-between text-[11px] font-mono text-muted-foreground">
+          <div className="mt-2 text-[11px] font-mono text-muted-foreground flex flex-wrap items-center justify-between gap-x-2">
             {type === "Polygon" && (
               <>
                 <span>Luas: <strong className="text-foreground">{areaStr}</strong></span>
@@ -256,6 +165,78 @@ export function SidebarFeatureItem({
             {type === "Point" && (
               <span>Posisi: <strong className="text-foreground">{posStr}</strong></span>
             )}
+          </div>
+
+          {/* Action icons di bawah item */}
+          <div className="mt-2.5 pt-2 border-t border-border/60 flex items-center justify-end gap-1">
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectPdfFeature(featureId);
+                    onOpenExportModal?.();
+                  }}
+                  className="w-7 h-7 hover:border-emerald-500 hover:text-emerald-500"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                </Button>
+              } />
+              <TooltipContent>Ekspor Laporan PDF Kartografi Bidang Ini</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onZoomToFeature(featureId);
+                  }}
+                  className="w-7 h-7 hover:border-blue-500 hover:text-blue-500"
+                >
+                  <Eye className="w-3.5 h-3.5 text-muted-foreground hover:text-blue-500" />
+                </Button>
+              } />
+              <TooltipContent>Fokus Peta</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditFeature?.(featureId);
+                  }}
+                  className="w-7 h-7 text-muted-foreground hover:text-foreground"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </Button>
+              } />
+              <TooltipContent>Ubah Atribut</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFeature(featureId);
+                  }}
+                  className="w-7 h-7 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              } />
+              <TooltipContent>Hapus Geometri</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       )}
