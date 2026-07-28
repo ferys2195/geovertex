@@ -113,7 +113,50 @@ export function DashboardView() {
         my_role: "owner",
       }));
 
-      setProjects(ownedMapped);
+      // Fetch Shared Projects (where user is a collaborator)
+      const { data: sharedMemberData } = await supabase
+        .from("project_members")
+        .select("role, project_id")
+        .eq("user_id", session.user.id)
+        .neq("role", "owner");
+
+      const ownedIds = new Set(ownedMapped.map((p) => p.id));
+      const sharedMapped: Project[] = [];
+
+      if (sharedMemberData && sharedMemberData.length > 0) {
+        const roleMap = new Map<string, "owner" | "editor" | "viewer">();
+        const sharedProjectIds: string[] = [];
+
+        for (const m of sharedMemberData) {
+          if (!ownedIds.has(m.project_id)) {
+            sharedProjectIds.push(m.project_id);
+            roleMap.set(m.project_id, m.role as "editor" | "viewer");
+          }
+        }
+
+        if (sharedProjectIds.length > 0) {
+          const { data: sharedProjData } = await supabase
+            .from("projects")
+            .select("*, project_members(count)")
+            .in("id", sharedProjectIds);
+
+          if (sharedProjData) {
+            for (const p of sharedProjData as unknown as SupabaseProjectRow[]) {
+              sharedMapped.push({
+                ...p,
+                members_count: p.project_members?.[0]?.count || 1,
+                my_role: roleMap.get(p.id) || "editor",
+              });
+            }
+          }
+        }
+      }
+
+      const allProjects = [...ownedMapped, ...sharedMapped].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+
+      setProjects(allProjects);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {

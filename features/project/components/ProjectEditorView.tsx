@@ -97,28 +97,75 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   const handleInviteMember = async (email: string, role: UserRole): Promise<boolean> => {
     if (projectId.startsWith("demo-proj")) {
       setProjectData(project, currentRole, [...members, { id: `mem-${Date.now()}`, email, full_name: email, role }]);
+      // Trigger email notification in demo mode
+      fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: email,
+          projectTitle: project?.title || "Proyek Pemetaan (Demo)",
+          role,
+          inviterEmail: "Demo Owner",
+          projectId,
+        }),
+      }).catch(console.error);
       return true;
     }
 
     try {
-      const { data: targetProfile } = await supabase
+      const cleanedEmail = email.trim().toLowerCase();
+
+      // Use .maybeSingle() to prevent HTTP 406 (PGRST116) when email doesn't exist in profiles
+      const { data: targetProfile, error: profErr } = await supabase
         .from("profiles")
         .select("id")
-        .eq("email", email)
-        .single();
+        .ilike("email", cleanedEmail)
+        .maybeSingle();
 
-      if (!targetProfile) return false;
+      if (profErr) {
+        console.error("Error searching profile:", profErr);
+        throw new Error(`Gagal memverifikasi profil: ${profErr.message}`);
+      }
 
-      const { error } = await supabase.from("project_members").insert({
+      if (!targetProfile) {
+        throw new Error(`Email "${email}" belum terdaftar di GeoVertex. Minta pengguna tersebut untuk login/daftar terlebih dahulu.`);
+      }
+
+      const { error: insertErr } = await supabase.from("project_members").insert({
         project_id: projectId,
         user_id: targetProfile.id,
         role,
       });
 
-      if (error) return false;
+      if (insertErr) {
+        if (insertErr.code === "23505") {
+          throw new Error(`Pengguna ${email} sudah terdaftar sebagai anggota proyek ini.`);
+        }
+        throw new Error(`Gagal menambahkan anggota: ${insertErr.message}`);
+      }
+
+      // Get inviter email
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Trigger Email Notification API
+      fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: cleanedEmail,
+          projectTitle: project?.title || "Proyek Pemetaan GeoVertex",
+          role,
+          inviterEmail: session?.user?.email || "Seorang pengguna GeoVertex",
+          projectId,
+        }),
+      }).catch(console.error);
+
       return true;
     } catch (err) {
       console.error("Invite error:", err);
+      if (err instanceof Error) {
+        throw err;
+      }
       return false;
     }
   };
