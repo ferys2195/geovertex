@@ -9,7 +9,7 @@ interface MapUtmToolbarProps {
 export function MapUtmToolbar({ onOpenUtmDialog, isSidebarOpen = false }: MapUtmToolbarProps) {
   return (
     <div
-      className="absolute top-4 z-1000 flex items-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      className="absolute top-4 z-30 flex items-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
       style={{ left: isSidebarOpen ? '376px' : '56px' }}
     >
       <button

@@ -215,11 +215,11 @@ export function ExportModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`bg-background border-border text-foreground shadow-2xl transition-all duration-300 ${
+          className={`bg-background border-border text-foreground shadow-2xl transition-all duration-300 max-h-[90vh] flex flex-col overflow-hidden ${
             activeTab === "pdf" ? "sm:max-w-5xl" : "sm:max-w-xl"
           }`}
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Download className="w-5 h-5 text-emerald-500" />
               Ekspor Data &amp; Laporan Peta Kartografi
@@ -229,8 +229,8 @@ export function ExportModal({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pdf" | "data")} className="w-full mt-1">
-            <TabsList className="grid grid-cols-2 w-full bg-muted">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pdf" | "data")} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden mt-1">
+            <TabsList className="grid grid-cols-2 w-full bg-muted shrink-0">
               <TabsTrigger value="pdf" className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-500" />
                 Laporan PDF Kartografi
@@ -242,10 +242,10 @@ export function ExportModal({
             </TabsList>
 
             {/* TAB PDF LAPORAN KARTOGRAFI */}
-            <TabsContent value="pdf" className="pt-3">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+            <TabsContent value="pdf" className="pt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto min-h-0 pr-1 max-h-[calc(90vh-190px)] grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
                 {/* LEFT COLUMN: FORM CONTROLS */}
-                <div className="md:col-span-6 space-y-3.5 text-xs max-h-[62vh] overflow-y-auto pr-1">
+                <div className="md:col-span-6 space-y-3.5 text-xs pr-1">
                   {/* Target Parcel Selector */}
                   <div>
                     <label className="block font-semibold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
@@ -395,7 +395,7 @@ export function ExportModal({
                   </div>
 
                   {/* Preview Container Box */}
-                  <div className="w-full aspect-[1/1.3] relative bg-slate-950 rounded-lg overflow-hidden border border-border flex items-center justify-center group shadow-inner">
+                  <div className="w-full aspect-[1/1.3] max-h-[40vh] relative bg-slate-950 rounded-lg overflow-hidden border border-border flex items-center justify-center group shadow-inner">
                     {isPreviewLoading && (
                       <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center z-10">
                         <Loader2 className="w-6 h-6 animate-spin text-emerald-500 mb-2" />
@@ -424,7 +424,7 @@ export function ExportModal({
                 </div>
               </div>
 
-              <DialogFooter className="mt-5 border-t border-border pt-3">
+              <DialogFooter className="shrink-0 mt-3 border-t border-border pt-3">
                 <Button variant="outline" onClick={onClose} disabled={isExporting}>
                   Batal
                 </Button>
