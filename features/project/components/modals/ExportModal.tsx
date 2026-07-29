@@ -26,6 +26,9 @@ import {
   Sparkles,
   Grid,
   Ruler,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import {
   exportCartographicPDF,
@@ -70,6 +73,7 @@ export function ExportModal({
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [isFullscreenPreview, setIsFullscreenPreview] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
 
   // Sync target feature & auto-update title to parcel name when modal opens or selected feature changes
   useEffect(() => {
@@ -215,37 +219,39 @@ export function ExportModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`bg-background border-border text-foreground shadow-2xl transition-all duration-300 ${
+          className={`bg-background border-border text-foreground shadow-2xl transition-all duration-300 w-[95vw] sm:w-full max-h-[92vh] flex flex-col overflow-hidden p-3.5 sm:p-5 ${
             activeTab === "pdf" ? "sm:max-w-5xl" : "sm:max-w-xl"
           }`}
         >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
-              <Download className="w-5 h-5 text-emerald-500" />
-              Ekspor Data &amp; Laporan Peta Kartografi
+          <DialogHeader className="shrink-0 pr-6 sm:pr-8">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-xl font-bold text-foreground leading-tight">
+              <Download className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 shrink-0" />
+              <span>Ekspor Data &amp; Laporan Peta Kartografi</span>
             </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-xs">
+            <DialogDescription className="text-muted-foreground text-[11px] sm:text-xs leading-snug mt-1">
               Preview halaman pertama laporan peta kartografi PDF berskala atau unduh format data spasial digital.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pdf" | "data")} className="w-full mt-1">
-            <TabsList className="grid grid-cols-2 w-full bg-muted">
-              <TabsTrigger value="pdf" className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-500" />
-                Laporan PDF Kartografi
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pdf" | "data")} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden mt-2">
+            <TabsList className="grid grid-cols-2 w-full bg-muted shrink-0 p-1 group-data-horizontal/tabs:h-10 items-center justify-center rounded-lg">
+              <TabsTrigger value="pdf" className="flex items-center justify-center gap-1.5 px-2 py-1 text-xs sm:text-sm font-medium h-full rounded-md">
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+                <span className="truncate">Laporan PDF</span>
+                <span className="hidden sm:inline"> Kartografi</span>
               </TabsTrigger>
-              <TabsTrigger value="data" className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-blue-500" />
-                Data Spasial Digital
+              <TabsTrigger value="data" className="flex items-center justify-center gap-1.5 px-2 py-1 text-xs sm:text-sm font-medium h-full rounded-md">
+                <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
+                <span className="truncate">Data Spasial</span>
+                <span className="hidden sm:inline"> Digital</span>
               </TabsTrigger>
             </TabsList>
 
             {/* TAB PDF LAPORAN KARTOGRAFI */}
-            <TabsContent value="pdf" className="pt-3">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+            <TabsContent value="pdf" className="pt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto min-h-0 pr-1 max-h-[calc(90vh-190px)] grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
                 {/* LEFT COLUMN: FORM CONTROLS */}
-                <div className="md:col-span-6 space-y-3.5 text-xs max-h-[62vh] overflow-y-auto pr-1">
+                <div className="md:col-span-6 space-y-3.5 text-xs pr-1">
                   {/* Target Parcel Selector */}
                   <div>
                     <label className="block font-semibold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
@@ -395,7 +401,7 @@ export function ExportModal({
                   </div>
 
                   {/* Preview Container Box */}
-                  <div className="w-full aspect-[1/1.3] relative bg-slate-950 rounded-lg overflow-hidden border border-border flex items-center justify-center group shadow-inner">
+                  <div className="w-full aspect-[1/1.3] max-h-[40vh] relative bg-slate-950 rounded-lg overflow-hidden border border-border flex items-center justify-center group shadow-inner">
                     {isPreviewLoading && (
                       <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center z-10">
                         <Loader2 className="w-6 h-6 animate-spin text-emerald-500 mb-2" />
@@ -424,14 +430,14 @@ export function ExportModal({
                 </div>
               </div>
 
-              <DialogFooter className="mt-5 border-t border-border pt-3">
-                <Button variant="outline" onClick={onClose} disabled={isExporting}>
+              <DialogFooter className="shrink-0 mt-3 border-t border-border pt-3 flex flex-col-reverse sm:flex-row gap-2">
+                <Button variant="outline" onClick={onClose} disabled={isExporting} className="w-full sm:w-auto">
                   Batal
                 </Button>
                 <Button
                   onClick={handleExportPDF}
                   disabled={isExporting || isPreviewLoading}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold w-full sm:w-auto"
                 >
                   {isExporting ? (
                     <>
@@ -454,7 +460,7 @@ export function ExportModal({
                 Unduh berkas spasial digital untuk digunakan di QGIS, ArcGIS, Google Earth, atau Excel:
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <Button
                   variant="outline"
                   className="h-16 flex flex-col items-start justify-center p-3 border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/10 text-left"
@@ -524,20 +530,75 @@ export function ExportModal({
 
       {/* FULLSCREEN PREVIEW MODAL OVERLAY */}
       {isFullscreenPreview && previewDataUrl && (
-        <Dialog open={isFullscreenPreview} onOpenChange={setIsFullscreenPreview}>
-          <DialogContent className="max-w-[92vw] max-h-[92vh] bg-slate-950/95 border-slate-800 text-white p-4 flex flex-col items-center justify-center">
-            <DialogHeader className="w-full flex flex-row items-center justify-between border-b border-slate-800 pb-2 mb-2">
-              <DialogTitle className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <Eye className="w-4 h-4 text-emerald-400" /> Preview Halaman 1 PDF Kartografi (Ukuran Penuh)
-              </DialogTitle>
+        <Dialog
+          open={isFullscreenPreview}
+          onOpenChange={(open) => {
+            setIsFullscreenPreview(open);
+            if (!open) setZoomScale(1);
+          }}
+        >
+          <DialogContent className="sm:max-w-[95vw] w-[95vw] max-h-[94vh] h-[94vh] bg-slate-950/95 border-slate-800 text-white p-3 sm:p-4 flex flex-col items-center justify-between">
+            <DialogHeader className="w-full border-b border-slate-800 pb-2 mb-2 shrink-0 pr-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <DialogTitle className="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
+                  <Eye className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="truncate">Preview PDF Kartografi</span>
+                  <span className="hidden sm:inline text-slate-400 font-normal text-xs">(Ukuran Penuh)</span>
+                </DialogTitle>
+
+                <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs px-2 border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+                      onClick={() => setZoomScale((s) => Math.max(0.5, +(s - 0.25).toFixed(2)))}
+                      title="Perkecil"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </Button>
+
+                    <span className="text-xs font-semibold text-emerald-400 min-w-[40px] text-center select-none">
+                      {Math.round(zoomScale * 100)}%
+                    </span>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs px-2 border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+                      onClick={() => setZoomScale((s) => Math.min(3, +(s + 0.25).toFixed(2)))}
+                      title="Perbesar"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-slate-400 hover:text-slate-200"
+                    onClick={() => setZoomScale(1)}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+                  </Button>
+                </div>
+              </div>
             </DialogHeader>
 
-            <div className="w-full h-[78vh] overflow-auto flex items-center justify-center p-2">
-              <img
-                src={previewDataUrl}
-                alt="Full Preview PDF Page 1"
-                className="max-h-full max-w-full object-contain rounded shadow-2xl border border-slate-800"
-              />
+            <div className="w-full flex-1 min-h-0 overflow-auto flex items-center justify-center p-1.5 sm:p-2 bg-slate-900/50 rounded border border-slate-800/50 touch-pan-x touch-pan-y">
+              <div
+                className="transition-transform duration-150 ease-out flex items-center justify-center min-w-full min-h-full"
+                style={{ transform: `scale(${zoomScale})`, transformOrigin: "center center" }}
+              >
+                <img
+                  src={previewDataUrl}
+                  alt="Full Preview PDF Page 1"
+                  className="max-h-[75vh] sm:max-h-[80vh] max-w-full object-contain rounded shadow-2xl border border-slate-800"
+                />
+              </div>
             </div>
           </DialogContent>
         </Dialog>

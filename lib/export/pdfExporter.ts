@@ -588,9 +588,16 @@ export const renderCartographicMapCanvas = async (
     ctx.save();
     ctx.translate(width / 2, height / 2);
     ctx.rotate((-30 * Math.PI) / 180);
-    ctx.fillStyle = "rgba(203, 213, 225, 0.35)";
     ctx.font = "bold 120px sans-serif";
     ctx.textAlign = "center";
+
+    // White contrast stroke halo for visibility over dark/colored polygon fills
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.lineWidth = 8;
+    ctx.strokeText("GeoVertex SaaS (Free Tier)", 0, 0);
+
+    // Slate fill for contrast over light map backgrounds
+    ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
     ctx.fillText("GeoVertex SaaS (Free Tier)", 0, 0);
     ctx.restore();
   }
