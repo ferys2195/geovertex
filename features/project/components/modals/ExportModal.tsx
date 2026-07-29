@@ -234,13 +234,13 @@ export function ExportModal({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pdf" | "data")} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden mt-2">
-            <TabsList className="grid grid-cols-2 w-full bg-muted shrink-0 p-1 h-auto">
-              <TabsTrigger value="pdf" className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs sm:text-sm font-medium">
+            <TabsList className="grid grid-cols-2 w-full bg-muted shrink-0 p-1 group-data-horizontal/tabs:h-10 items-center justify-center rounded-lg">
+              <TabsTrigger value="pdf" className="flex items-center justify-center gap-1.5 px-2 py-1 text-xs sm:text-sm font-medium h-full rounded-md">
                 <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
                 <span className="truncate">Laporan PDF</span>
                 <span className="hidden sm:inline"> Kartografi</span>
               </TabsTrigger>
-              <TabsTrigger value="data" className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs sm:text-sm font-medium">
+              <TabsTrigger value="data" className="flex items-center justify-center gap-1.5 px-2 py-1 text-xs sm:text-sm font-medium h-full rounded-md">
                 <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
                 <span className="truncate">Data Spasial</span>
                 <span className="hidden sm:inline"> Digital</span>
