@@ -110,6 +110,7 @@ export function MapCanvas({
     setInternalHoverCoords,
     setHoverCoords,
     setRightClickCoords,
+    readOnly,
   });
 
   // 5. Trigger Leaflet invalidateSize & shift Geoman controls smoothly when sidebar toggles
