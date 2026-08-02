@@ -24,6 +24,7 @@ export function EditorSidebar({
   onSelectPdfFeature = () => {},
   onOpenExportModal,
   onEditFeature,
+  isReadOnly = false,
 }: EditorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<FeatureFilterType>("ALL");
@@ -128,6 +129,7 @@ export function EditorSidebar({
                     onSelectPdfFeature={onSelectPdfFeature}
                     onOpenExportModal={onOpenExportModal}
                     onEditFeature={onEditFeature}
+                    isReadOnly={isReadOnly}
                     editName={editName}
                     setEditName={setEditName}
                     editDesc={editDesc}

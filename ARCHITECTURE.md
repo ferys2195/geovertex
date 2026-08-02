@@ -35,6 +35,22 @@ Dalam ekosistem Next.js (yang berbasis React, TypeScript/JavaScript), konvensi b
 
 ---
 
+## Prinsip Single Source of Truth (SSOT) & DRY (Don't Repeat Yourself)
+
+> **ATURAN WAJIB KOMPONEN BERULANG**:
+> Dilarang keras membuat ulang UI markup, tombol aksi, atau handler event yang sama di beberapa tempat yang berbeda (misalnya membuat tombol aksi di Sidebar dan membuat ulang HTML/UI tombol aksi yang sama di Popup/Canvas Peta). Seluruh elemen UI yang berulang **HARUS** mengekstrak dan menggunakan satu komponen React yang sama (*Single Source of Truth*).
+
+### 1. Ekstraksi Reusable Component (Single Source of Truth)
+- **Satu Komponen Utama untuk Aksi Berulang**: Jika suatu set tombol aksi atau kontrol UI (contoh: `FeatureActionButtons.tsx`) digunakan di beberapa tempat (misalnya di Sidebar, Context Menu, Modal, atau Leaflet Canvas Popup), **WAJIB** menggunakan komponen tersebut sebagai sumber tunggal (*Single Source of Truth*).
+- **Penggunaan React Portal / `createRoot` pada Third-Party Library**: Jika komponen UI React perlu ditampilkan di dalam pustaka non-React atau manipulasi DOM pihak ketiga (seperti Leaflet Popup, Mapbox, dsb.), gunakan `createRoot` dari `'react-dom/client'` atau React Portal untuk men-render komponen React sumber tunggal tersebut. **DILARANG KERAS** menduplikasi markup HTML murni dan event handler terpisah.
+
+### 2. Keuntungan & Dampak Penegakan SSOT & DRY
+- **Bebas Bug Sinkronisasi**: Setiap perubahan bisnis logic, penambahan role restriction (`isReadOnly`), styling, maupun tooltip pada komponen utama akan secara **otomatis tersinkronisasi di seluruh aplikasi** tanpa perlu memperbarui tempat lain secara manual.
+- **Konsistensi UX**: Memastikan tampilan visual, status disabled, dan interaksi pengguna selalu 100% identik di setiap sudut aplikasi.
+- **Kemudahan Maintainability**: Mengurangi duplikasi baris kode (*Code Bloat*) dan mempermudah pengujian serta debugging.
+
+---
+
 ## Alur Data (WAJIB dipatuhi)
 
 ```
@@ -499,4 +515,5 @@ AI **tidak boleh** menghasilkan kode yang:
 - ❌ Mengimport langsung dari dalam folder fitur lain (harus via `index.ts`)
 - ❌ Membuat file di luar struktur folder yang sudah ditentukan
 - ❌ Menggunakan relative import untuk file di folder berbeda (gunakan `@/` alias)
+- ❌ Menduplikasi markup UI atau event handler yang berulang di tempat lain daripada menggunakan komponen tunggal (Prinsip SSOT & DRY)
 - ❌ Menambahkan dependency baru tanpa izin eksplisit

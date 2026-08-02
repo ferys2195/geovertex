@@ -16,6 +16,7 @@ export interface FeatureActionButtonsProps {
   onEditFeature?: (featureId: string) => void;
   onDeleteFeature?: (featureId: string) => void;
   showZoom?: boolean;
+  isReadOnly?: boolean;
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export function FeatureActionButtons({
   onEditFeature,
   onDeleteFeature,
   showZoom = true,
+  isReadOnly = false,
   className = "flex items-center justify-end gap-1",
 }: FeatureActionButtonsProps) {
   const [copied, setCopied] = useState(false);
@@ -136,16 +138,19 @@ export function FeatureActionButtons({
             <Button
               variant="ghost"
               size="icon"
+              disabled={isReadOnly}
               onClick={(e) => {
                 e.stopPropagation();
-                onEditFeature(featureId);
+                if (!isReadOnly) onEditFeature(featureId);
               }}
-              className="w-7 h-7 text-muted-foreground hover:text-foreground"
+              className="w-7 h-7 text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground"
             >
               <Edit3 className="w-3.5 h-3.5" />
             </Button>
           } />
-          <TooltipContent>Ubah Atribut</TooltipContent>
+          <TooltipContent>
+            {isReadOnly ? "Role Viewer hanya memiliki akses baca" : "Ubah Atribut"}
+          </TooltipContent>
         </Tooltip>
       )}
 
@@ -155,16 +160,19 @@ export function FeatureActionButtons({
             <Button
               variant="ghost"
               size="icon"
+              disabled={isReadOnly}
               onClick={(e) => {
                 e.stopPropagation();
-                onDeleteFeature(featureId);
+                if (!isReadOnly) onDeleteFeature(featureId);
               }}
-              className="w-7 h-7 text-muted-foreground hover:text-destructive"
+              className="w-7 h-7 text-muted-foreground hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           } />
-          <TooltipContent>Hapus Geometri</TooltipContent>
+          <TooltipContent>
+            {isReadOnly ? "Role Viewer tidak dapat menghapus geometri" : "Hapus Geometri"}
+          </TooltipContent>
         </Tooltip>
       )}
     </div>

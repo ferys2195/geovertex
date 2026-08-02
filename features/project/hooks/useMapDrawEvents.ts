@@ -14,6 +14,7 @@ interface UseMapDrawEventsOptions {
   setInternalHoverCoords: (coords: { lat: number; lng: number } | null) => void;
   setHoverCoords?: (coords: { lat: number; lng: number } | null) => void;
   setRightClickCoords: (coords: { lat: number; lng: number } | null) => void;
+  readOnly?: boolean;
 }
 
 export function useMapDrawEvents({
@@ -28,6 +29,7 @@ export function useMapDrawEvents({
   setInternalHoverCoords,
   setHoverCoords,
   setRightClickCoords,
+  readOnly = false,
 }: UseMapDrawEventsOptions) {
   const isDrawingRef = useRef<boolean>(false);
   const drawingTypeRef = useRef<string>('');
@@ -37,22 +39,35 @@ export function useMapDrawEvents({
     const map = mapInstanceRef.current;
     if (!isMapReady || !map) return;
 
-    map.pm.addControls({
-      position: 'topleft',
-      drawMarker: true,
-      drawCircleMarker: false,
-      drawPolyline: true,
-      drawRectangle: true,
-      drawPolygon: true,
-      drawCircle: false,
-      editMode: true,
-      dragMode: true,
-      cutPolygon: false,
-      removalMode: true,
-      oneBlock: true,
-    });
+    if (readOnly) {
+      map.pm.removeControls();
+      if (typeof (map.pm as any).disableDraw === 'function') {
+        (map.pm as any).disableDraw();
+      }
+      if (typeof (map.pm as any).disableGlobalEditMode === 'function') {
+        (map.pm as any).disableGlobalEditMode();
+      }
+      if (typeof (map.pm as any).disableGlobalRemovalMode === 'function') {
+        (map.pm as any).disableGlobalRemovalMode();
+      }
+    } else {
+      map.pm.addControls({
+        position: 'topleft',
+        drawMarker: true,
+        drawCircleMarker: false,
+        drawPolyline: true,
+        drawRectangle: true,
+        drawPolygon: true,
+        drawCircle: false,
+        editMode: true,
+        dragMode: true,
+        cutPolygon: false,
+        removalMode: true,
+        oneBlock: true,
+      });
 
-    map.pm.setLang('en');
+      map.pm.setLang('en');
+    }
 
     const handlePmCreate = (e: any) => {
       const layer = e.layer;
@@ -194,7 +209,7 @@ export function useMapDrawEvents({
       map.off('contextmenu', handleContextMenu);
       map.off('click', handleMapClick);
     };
-  }, [isMapReady]);
+  }, [isMapReady, readOnly]);
 
   return {
     isDrawingRef,

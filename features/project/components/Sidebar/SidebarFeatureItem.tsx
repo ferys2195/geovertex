@@ -18,6 +18,7 @@ interface SidebarFeatureItemProps {
   onSelectPdfFeature: (id: string | null) => void;
   onOpenExportModal?: () => void;
   onEditFeature?: (featureId: string) => void;
+  isReadOnly?: boolean;
   editName: string;
   setEditName: (val: string) => void;
   editDesc: string;
@@ -45,6 +46,7 @@ export function SidebarFeatureItem({
   onSelectPdfFeature,
   onOpenExportModal,
   onEditFeature,
+  isReadOnly = false,
   editName,
   setEditName,
   editDesc,
@@ -176,6 +178,7 @@ export function SidebarFeatureItem({
               onZoomToFeature={onZoomToFeature}
               onEditFeature={onEditFeature}
               onDeleteFeature={onDeleteFeature}
+              isReadOnly={isReadOnly}
             />
           </div>
         </div>

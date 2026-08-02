@@ -94,6 +94,7 @@ export function MapCanvas({
     onEditFeature,
     updateFocusedMeasurementsForLayer,
     clearFocusedMeasurements,
+    readOnly,
   });
 
   // 4. Geoman Drawing controls & Canvas mouse event listeners
@@ -109,6 +110,7 @@ export function MapCanvas({
     setInternalHoverCoords,
     setHoverCoords,
     setRightClickCoords,
+    readOnly,
   });
 
   // 5. Trigger Leaflet invalidateSize & shift Geoman controls smoothly when sidebar toggles
@@ -202,6 +204,7 @@ export function MapCanvas({
       <MapUtmToolbar
         onOpenUtmDialog={() => setIsUtmDialogOpen(true)}
         isSidebarOpen={isSidebarOpen}
+        readOnly={readOnly}
       />
 
       {/* MOUSE HOVER COORDINATES METRIC DISPLAY & TOGGLE */}
