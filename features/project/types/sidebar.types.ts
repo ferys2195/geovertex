@@ -13,4 +13,6 @@ export interface EditorSidebarProps {
   onSelectPdfFeature?: (id: string | null) => void;
   onOpenExportModal?: () => void;
   onEditFeature?: (featureId: string) => void;
+  isReadOnly?: boolean;
+  currentRole?: string;
 }

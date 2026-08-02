@@ -80,7 +80,7 @@ export function ShareModal({
         </DialogHeader>
 
         {/* Invite Form */}
-        {currentRole === "owner" && (
+        {currentRole === "owner" ? (
           <form onSubmit={handleInvite} className="space-y-3 p-3.5 bg-muted/50 rounded-lg border border-border mt-1">
             <label className="block text-xs font-semibold text-muted-foreground">Undang Anggota Baru via Email</label>
             <div className="flex gap-2">
@@ -133,6 +133,16 @@ export function ShareModal({
               </div>
             )}
           </form>
+        ) : (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-xs flex items-start gap-2.5 mt-1">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold uppercase tracking-wider text-[10px]">Akses Terbatas ({currentRole})</p>
+              <p className="text-[11px] text-amber-300/80 mt-0.5">
+                Hanya Pemilik Proyek (Owner) yang memiliki wewenang untuk mengundang atau mengelola anggota tim.
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Members List */}

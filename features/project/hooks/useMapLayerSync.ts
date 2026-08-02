@@ -1,9 +1,12 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createRoot, Root } from 'react-dom/client';
 import L from 'leaflet';
 import { FeatureCollection } from 'geojson';
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength, formatArea, formatDistance, latLngToUtm } from '@/lib/gis';
 import { CoordinateMode } from '@/lib/types';
 import { getFlatLatLngs, createCustomPinIcon } from '../utils/leafletHelpers';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { FeatureActionButtons } from '../components/FeatureActionButtons';
 
 interface UseMapLayerSyncOptions {
   mapInstanceRef: React.RefObject<L.Map | null>;
@@ -22,6 +25,7 @@ interface UseMapLayerSyncOptions {
   onEditFeature?: (id: string) => void;
   updateFocusedMeasurementsForLayer: (layer: any) => void;
   clearFocusedMeasurements: () => void;
+  readOnly?: boolean;
 }
 
 export function useMapLayerSync({
@@ -41,6 +45,7 @@ export function useMapLayerSync({
   onEditFeature,
   updateFocusedMeasurementsForLayer,
   clearFocusedMeasurements,
+  readOnly = false,
 }: UseMapLayerSyncOptions) {
   const mapGeoJsonStrRef = useRef<string>('');
   const isInternalUserActionRef = useRef<boolean>(false);
@@ -187,39 +192,8 @@ export function useMapLayerSync({
           
           ${bodyHtml}
 
-          <div class="pt-2 border-t border-zinc-200 flex items-center justify-end gap-1">
-            <button
-              id="popup-pdf-${featureId}"
-              type="button"
-              title="Ekspor Laporan PDF Kartografi Bidang Ini"
-              class="w-7 h-7 flex items-center justify-center rounded-md border border-zinc-200 bg-white hover:border-emerald-500 hover:text-emerald-600 text-zinc-600 transition-colors cursor-pointer"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            </button>
-            <button
-              id="popup-copy-${featureId}"
-              type="button"
-              title="Salin Koordinat Geometri"
-              class="w-7 h-7 flex items-center justify-center rounded-md border border-zinc-200 bg-white hover:border-zinc-400 text-zinc-600 transition-colors cursor-pointer"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-            <button
-              id="popup-edit-${featureId}"
-              type="button"
-              title="Ubah Atribut"
-              class="w-7 h-7 flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-            </button>
-            <button
-              id="popup-del-${featureId}"
-              type="button"
-              title="Hapus Geometri"
-              class="w-7 h-7 flex items-center justify-center rounded-md text-zinc-500 hover:text-rose-600 transition-colors cursor-pointer"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            </button>
+          <div class="pt-2 border-t border-zinc-200 flex items-center justify-end">
+            <div id="popup-actions-${featureId}"></div>
           </div>
         </div>
       `;
@@ -236,97 +210,61 @@ export function useMapLayerSync({
 
     updatePopupContent();
 
+    let activeRoot: Root | null = null;
+
     layer.on('popupopen', () => {
       const featureId = layer._pm_temp_id;
       setTimeout(() => {
-        const btnPdf = document.getElementById(`popup-pdf-${featureId}`);
-        if (btnPdf) {
-          btnPdf.onclick = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onSelectPdfFeature(featureId);
-            onOpenExportModal?.();
-            layer.closePopup();
-          };
-        }
-
-        const btnCopy = document.getElementById(`popup-copy-${featureId}`);
-        if (btnCopy) {
-          btnCopy.onclick = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            let currentGeo: any = null;
-            if (typeof layer.toGeoJSON === 'function') {
-              try { currentGeo = layer.toGeoJSON(); } catch { currentGeo = null; }
+        const container = document.getElementById(`popup-actions-${featureId}`);
+        if (container) {
+          let currentGeo: any = null;
+          if (typeof layer.toGeoJSON === 'function') {
+            try {
+              currentGeo = layer.toGeoJSON();
+            } catch {
+              currentGeo = null;
             }
-            const geom = currentGeo?.geometry || layer.feature?.geometry;
-            let textToCopy = "";
-            if (geom?.type === "Point" && geom.coordinates) {
-              const [lng, lat] = geom.coordinates as number[];
-              textToCopy = coordinateMode === "UTM"
-                ? latLngToUtm(lat, lng).formatted
-                : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            } else if (geom?.type === "LineString" && geom.coordinates) {
-              const coords = geom.coordinates as number[][];
-              textToCopy = coords
-                .map(([lng, lat]) =>
-                  coordinateMode === "UTM"
-                    ? latLngToUtm(lat, lng).formatted
-                    : `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-                )
-                .join("\n");
-            } else if (geom?.type === "Polygon" && geom.coordinates?.[0]) {
-              const ring = geom.coordinates[0] as number[][];
-              textToCopy = ring
-                .map(([lng, lat]) =>
-                  coordinateMode === "UTM"
-                    ? latLngToUtm(lat, lng).formatted
-                    : `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-                )
-                .join("\n");
-            } else {
-              textToCopy = JSON.stringify((geom as any)?.coordinates || {});
-            }
+          }
+          const geom = currentGeo?.geometry || layer.feature?.geometry;
 
-            if (textToCopy) {
-              navigator.clipboard.writeText(textToCopy);
-              btnCopy.setAttribute("title", "Koordinat Disalin!");
-              btnCopy.classList.add("border-emerald-500", "text-emerald-600", "bg-emerald-50");
-              btnCopy.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
-              setTimeout(() => {
-                btnCopy.setAttribute("title", "Salin Koordinat Geometri");
-                btnCopy.classList.remove("border-emerald-500", "text-emerald-600", "bg-emerald-50");
-                btnCopy.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-              }, 2000);
-            }
-          };
-        }
-
-        const btnEdit = document.getElementById(`popup-edit-${featureId}`);
-        if (btnEdit) {
-          btnEdit.onclick = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onSelectPdfFeature(featureId);
-            onEditFeature?.(featureId);
-            layer.closePopup();
-          };
-        }
-
-        const btnDel = document.getElementById(`popup-del-${featureId}`);
-        if (btnDel) {
-          btnDel.onclick = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            layer.closePopup();
-            if (window.confirm("Apakah Anda yakin ingin menghapus geometri bidang ini?")) {
-              geojsonGroupRef.current?.removeLayer(layer);
-              onDeleteFeature?.(featureId);
-              syncMapToStateRef.current?.();
-            }
-          };
+          activeRoot = createRoot(container);
+          activeRoot.render(
+            React.createElement(
+              TooltipProvider,
+              null,
+              React.createElement(FeatureActionButtons, {
+                featureId,
+                geom,
+                coordinateMode,
+                onSelectPdfFeature: (id: string | null) => onSelectPdfFeature(id),
+                onOpenExportModal,
+                showZoom: false,
+                onEditFeature: (id: string) => {
+                  layer.closePopup();
+                  onSelectPdfFeature(id);
+                  onEditFeature?.(id);
+                },
+                onDeleteFeature: (id: string) => {
+                  layer.closePopup();
+                  geojsonGroupRef.current?.removeLayer(layer);
+                  onDeleteFeature?.(id);
+                  syncMapToStateRef.current?.();
+                },
+                isReadOnly: readOnly,
+              })
+            )
+          );
         }
       }, 50);
+    });
+
+    layer.on('popupclose', () => {
+      if (activeRoot) {
+        try {
+          activeRoot.unmount();
+        } catch {}
+        activeRoot = null;
+      }
     });
 
     layer.on('click', (e: L.LeafletMouseEvent) => {

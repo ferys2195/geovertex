@@ -251,7 +251,10 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
                   selectedPdfFeatureId={selectedPdfFeatureId}
                   onSelectPdfFeature={setSelectedPdfFeatureId}
                   onOpenExportModal={() => setIsExportOpen(true)}
+                  isReadOnly={isReadOnly}
+                  currentRole={currentRole}
                   onEditFeature={(featureId) => {
+                    if (isReadOnly) return;
                     setEditingFeatureId(featureId);
                     setIsEditModalOpen(true);
                   }}
