@@ -16,7 +16,7 @@ export function ActionButtons({ onOpenShareModal, onOpenExportModal, onOpenSuppo
         variant="outline"
         onClick={onOpenSupportModal}
         title="Dukung Pengembangan GeoVertex (Trakteer / Saweria)"
-        className="border-amber-600/40 bg-gradient-to-r from-amber-950/60 to-orange-950/60 hover:from-amber-900/80 hover:to-orange-900/80 text-amber-200 hover:text-amber-100 text-[11px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 shrink-0 shadow-sm"
+        className="border-amber-600/40 bg-linear-to-r from-amber-950/60 to-orange-950/60 hover:from-amber-900/80 hover:to-orange-900/80 text-amber-200 hover:text-amber-100 text-[11px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 shrink-0 shadow-sm"
       >
         <Coffee className="w-3.5 h-3.5 sm:mr-1.5 text-amber-400" />
         <span className="hidden sm:inline">Dukung</span>

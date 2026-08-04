@@ -24,8 +24,8 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg bg-slate-900/95 border-slate-800 text-slate-100 backdrop-blur-xl shadow-2xl overflow-hidden p-0 rounded-2xl">
         {/* Header Hero Banner with Gradient */}
-        <div className="relative bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-rose-500/20 p-6 pt-8 pb-6 border-b border-slate-800 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 ring-4 ring-orange-500/10 mb-3">
+        <div className="relative bg-linear-to-br from-amber-500/20 via-orange-500/10 to-rose-500/20 p-6 pt-8 pb-6 border-b border-slate-800 text-center">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-linear-to-tr from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 ring-4 ring-orange-500/10 mb-3">
             <Coffee className="w-7 h-7 text-slate-950 stroke-[2.5]" />
           </div>
           <DialogTitle className="text-xl font-bold text-slate-50 flex items-center justify-center gap-2">
@@ -42,7 +42,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             href={trakteerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-rose-950/40 to-slate-900/80 border border-rose-800/30 hover:border-rose-500/60 transition-all duration-200 hover:shadow-lg hover:shadow-rose-950/30"
+            className="group flex items-center justify-between p-4 rounded-xl bg-linear-to-r from-rose-950/40 to-slate-900/80 border border-rose-800/30 hover:border-rose-500/60 transition-all duration-200 hover:shadow-lg hover:shadow-rose-950/30"
           >
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-105 transition-transform">
@@ -65,7 +65,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             href={saweriaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-950/40 to-slate-900/80 border border-amber-800/30 hover:border-amber-500/60 transition-all duration-200 hover:shadow-lg hover:shadow-amber-950/30"
+            className="group flex items-center justify-between p-4 rounded-xl bg-linear-to-r from-amber-950/40 to-slate-900/80 border border-amber-800/30 hover:border-amber-500/60 transition-all duration-200 hover:shadow-lg hover:shadow-amber-950/30"
           >
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
@@ -89,7 +89,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
               href={bmacUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-950/20 to-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all duration-200"
+              className="group flex items-center justify-between p-4 rounded-xl bg-linear-to-r from-amber-950/20 to-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all duration-200"
             >
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 group-hover:scale-105 transition-transform">

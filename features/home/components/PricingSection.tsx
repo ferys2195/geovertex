@@ -69,7 +69,7 @@ export function PricingSection() {
         {/* Support Development Card */}
         <motion.div
           whileHover={{ y: -4, transition: { duration: 0.2 } }}
-          className="bg-gradient-to-b from-amber-950/40 via-orange-950/20 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative"
+          className="bg-linear-to-b from-amber-950/40 via-orange-950/20 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative"
         >
           <div className="absolute -top-3.5 right-8 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-slate-950 shadow-md">
             Dukung Developer ☕
