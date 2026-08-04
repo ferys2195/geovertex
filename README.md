@@ -113,6 +113,24 @@ Built to eliminate the need for heavy desktop GIS software installations (such a
 
 ---
 
+## ☕ Support & Donation
+
+GeoVertex is 100% free to use for spatial mapping, parcel digitizing, and cartographic PDF exports without watermarks or feature limits. If GeoVertex helps your daily workflow, consider supporting its development:
+
+- 🇮🇩 **[Trakteer.id](https://trakteer.id/ferys2195)** (GoPay, OVO, Dana, QRIS)
+- 🇮🇩 **[Saweria.co](https://saweria.co/ferys2195)** (All Payment QRIS)
+
+---
+
+## 👤 Author & Developer
+
+Created with ❤️ by **[Fery Irawan](https://feryirawan.com)**
+
+- Website: [https://feryirawan.com](https://feryirawan.com)
+- GitHub: [@ferys2195](https://github.com/ferys2195)
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](./LICENSE).

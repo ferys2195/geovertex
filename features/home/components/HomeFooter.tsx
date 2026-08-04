@@ -1,4 +1,4 @@
-import { Layers, ExternalLink } from "lucide-react";
+import { Layers, ExternalLink, Heart } from "lucide-react";
 
 export function HomeFooter() {
   return (
@@ -17,7 +17,15 @@ export function HomeFooter() {
           </a>
         </div>
 
-        <p>&copy; {new Date().getFullYear()} GeoVertex SaaS. All rights reserved.</p>
+        <div className="text-right">
+          <p>&copy; {new Date().getFullYear()} GeoVertex SaaS. All rights reserved.</p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Dibuat oleh{" "}
+            <a href="https://feryirawan.com" target="_blank" rel="noreferrer" className="text-slate-300 hover:text-white underline underline-offset-2 font-medium">
+              Fery Irawan
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
