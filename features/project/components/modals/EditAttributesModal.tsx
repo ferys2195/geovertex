@@ -224,7 +224,7 @@ export function EditAttributesModal({
                 </div>
               )}
 
-              <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-95 overflow-y-auto pr-1">
                 {Object.entries(customProps).map(([k, v], i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Input

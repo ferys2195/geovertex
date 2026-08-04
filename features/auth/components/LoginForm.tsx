@@ -134,7 +134,7 @@ export function LoginForm() {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Gratis 3 proyek aktif untuk pengguna Free Tier</span>
+              <span>Akses proyek pemetaan tanpa batas tanpa biaya</span>
             </div>
           </div>
         </div>

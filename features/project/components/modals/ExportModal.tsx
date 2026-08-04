@@ -254,7 +254,7 @@ export function ExportModal({
                 <div className="md:col-span-6 space-y-3.5 text-xs pr-1">
                   {/* Target Parcel Selector */}
                   <div>
-                    <label className="block font-semibold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
+                    <label className="font-semibold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Target Bidang / Feature PDF
                     </label>
                     <select
@@ -273,7 +273,7 @@ export function ExportModal({
 
                   {/* Base Map Switcher */}
                   <div>
-                    <label className="block font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                    <label className="font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-blue-500" /> Base Map Peta PDF
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -559,7 +559,7 @@ export function ExportModal({
                       <ZoomOut className="w-3.5 h-3.5" />
                     </Button>
 
-                    <span className="text-xs font-semibold text-emerald-400 min-w-[40px] text-center select-none">
+                    <span className="text-xs font-semibold text-emerald-400 min-w-10 text-center select-none">
                       {Math.round(zoomScale * 100)}%
                     </span>
 

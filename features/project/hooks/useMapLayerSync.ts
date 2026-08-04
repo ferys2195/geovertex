@@ -181,9 +181,9 @@ export function useMapLayerSync({
       }
 
       const tooltipHtml = `
-        <div class="p-2.5 text-xs font-sans min-w-[210px] space-y-2">
+        <div class="p-2.5 text-xs font-sans min-w-52.5 space-y-2">
           <div class="flex items-center justify-between border-b border-zinc-200 pb-1.5 gap-2">
-            <p class="font-bold text-zinc-900 text-sm truncate max-w-[130px] m-0">${name}</p>
+            <p class="font-bold text-zinc-900 text-sm truncate max-w-32.5 m-0">${name}</p>
             <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-300 shrink-0">
               ${geomTypeBadge}
             </span>

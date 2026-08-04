@@ -14,6 +14,7 @@ interface EditorHeaderProps {
   saveStatus: CloudSaveStatus;
   onOpenShareModal: () => void;
   onOpenExportModal: () => void;
+  onOpenSupportModal: () => void;
 }
 
 export function EditorHeader({
@@ -26,6 +27,7 @@ export function EditorHeader({
   saveStatus,
   onOpenShareModal,
   onOpenExportModal,
+  onOpenSupportModal,
 }: EditorHeaderProps) {
   return (
     <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-2.5 sm:px-4 flex items-center justify-between z-30 shrink-0 gap-2 overflow-x-auto no-scrollbar">
@@ -46,6 +48,7 @@ export function EditorHeader({
         <ActionButtons
           onOpenShareModal={onOpenShareModal}
           onOpenExportModal={onOpenExportModal}
+          onOpenSupportModal={onOpenSupportModal}
         />
       </div>
     </header>

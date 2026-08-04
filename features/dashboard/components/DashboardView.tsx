@@ -168,13 +168,6 @@ export function DashboardView() {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    // Check Free Tier Limit (Max 3 Projects)
-    const isPro = profile?.subscription_tier === "pro";
-    if (!isPro && projects.length >= 3) {
-      setErrorMessage("Batas kuota Free Tier tercapai (Maksimal 3 Proyek Aktif). Upgrade ke Pro Tier untuk membuat proyek tanpa batas!");
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
@@ -269,7 +262,6 @@ export function DashboardView() {
             <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-semibold text-white">{profile?.full_name || user?.email || "Surveyor User"}</p>
-                <p className="text-[10px] text-slate-400 font-mono capitalize">{profile?.subscription_tier || "free"} Tier</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleSignOut} title="Keluar / Logout" className="text-slate-400 hover:text-white">
                 <LogOut className="w-4 h-4" />
@@ -281,21 +273,10 @@ export function DashboardView() {
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Banner Tier */}
+        {/* Banner */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 rounded-2xl bg-linear-to-r from-blue-900/40 via-slate-900 to-emerald-900/30 border border-slate-800 shadow-xl gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-white">Dashboard Proyek Pemetaan Spasial</span>
-              {!isPro ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Free Tier (Maks. 3 Proyek)
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Pro Tier (Unlimited)
-                </span>
-              )}
-            </div>
+            <h1 className="text-xl font-bold text-white">Dashboard Proyek Pemetaan Spasial</h1>
             <p className="text-xs text-slate-400">
               Kelola proyek GIS, undang tim kolaborasi, dan simpan geometri vertex otomatis di Supabase PostGIS Cloud.
             </p>
@@ -322,7 +303,6 @@ export function DashboardView() {
           </div>
           <div className="text-xs text-slate-400 flex items-center gap-4 w-full sm:w-auto justify-end">
             <span>Total Proyek: <strong className="text-white">{projects.length}</strong></span>
-            <span>Kuota Terpakai: <strong className="text-white">{projects.length} / {isPro ? "∞" : "3"}</strong></span>
           </div>
         </div>
 

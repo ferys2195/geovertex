@@ -1,15 +1,28 @@
 import React from "react";
-import { Share2, Download } from "lucide-react";
+import { Share2, Download, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ActionButtonsProps {
   onOpenShareModal: () => void;
   onOpenExportModal: () => void;
+  onOpenSupportModal: () => void;
 }
 
-export function ActionButtons({ onOpenShareModal, onOpenExportModal }: ActionButtonsProps) {
+export function ActionButtons({ onOpenShareModal, onOpenExportModal, onOpenSupportModal }: ActionButtonsProps) {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onOpenSupportModal}
+        title="Dukung Pengembangan GeoVertex (Trakteer / Saweria)"
+        className="border-amber-600/40 bg-linear-to-r from-amber-950/60 to-orange-950/60 hover:from-amber-900/80 hover:to-orange-900/80 text-amber-200 hover:text-amber-100 text-[11px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 shrink-0 shadow-sm"
+      >
+        <Coffee className="w-3.5 h-3.5 sm:mr-1.5 text-amber-400" />
+        <span className="hidden sm:inline">Dukung</span>
+        <span className="hidden xs:inline sm:hidden">☕</span>
+      </Button>
+
       <Button
         size="sm"
         variant="outline"
