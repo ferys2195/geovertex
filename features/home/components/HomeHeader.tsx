@@ -131,7 +131,7 @@ export function HomeHeader() {
             GeoVertex vs QGIS
           </a>
           <a href="#pricing" className="hover:text-white transition-colors">
-            Harga & Paket
+            Dukungan & Donasi
           </a>
         </nav>
 
@@ -268,7 +268,7 @@ export function HomeHeader() {
               onClick={() => setIsMobileMenuOpen(false)}
               className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
             >
-              Harga & Paket
+              Dukungan & Donasi
             </a>
           </nav>
 
