@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ExportModal } from "./modals/ExportModal";
 import { ShareModal } from "./modals/ShareModal";
 import { EditAttributesModal } from "./modals/EditAttributesModal";
+import { SupportModal } from "./modals/SupportModal";
 import { Loader2 } from "lucide-react";
 import { EditorSidebar } from "./EditorSidebar";
 import { GisFeatureProperties, UserRole } from "../types/project.types";
@@ -37,6 +38,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   const { geoJsonData, handleUpdateGeoJSON } = useGeoJsonSync();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
 
   const project = useProjectStore((state) => state.project);
@@ -209,6 +211,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
         saveStatus={saveStatus}
         onOpenShareModal={() => setIsShareOpen(true)}
         onOpenExportModal={() => setIsExportOpen(true)}
+        onOpenSupportModal={() => setIsSupportOpen(true)}
       />
 
       {/* Main Content Body: Sidebar + Map Canvas Container */}
@@ -313,6 +316,11 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
         onSave={(featureId, props) => {
           handleUpdateFeatureProperties(featureId, props);
         }}
+      />
+
+      <SupportModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
       />
     </div>
   );

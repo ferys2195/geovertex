@@ -42,8 +42,8 @@ export function ShareModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const maxMembers = isProTier ? 999 : 2;
-  const isQuotaReached = !isProTier && members.length >= maxMembers;
+  const maxMembers = 999;
+  const isQuotaReached = false;
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +112,7 @@ export function ShareModal({
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-[11px] text-muted-foreground">
-                Kuota Tim: <span className="font-bold text-foreground">{members.length}</span> / {isProTier ? "∞" : "2 (Free Tier)"}
+                Kuota Tim: <span className="font-bold text-foreground">{members.length}</span> / ∞ (Tanpa Batas)
               </span>
               <Button
                 type="submit"
