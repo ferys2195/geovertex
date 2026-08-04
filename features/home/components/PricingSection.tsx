@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Heart, Coffee, Gift, Sparkles, ShieldCheck } from "lucide-react";
 
@@ -7,7 +10,14 @@ export function PricingSection() {
   const saweriaUrl = process.env.NEXT_PUBLIC_SAWERIA_URL || "https://saweria.co";
 
   return (
-    <section id="pricing" className="py-20 px-6 max-w-7xl mx-auto space-y-12 z-10 relative">
+    <motion.section
+      id="pricing"
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="py-20 px-6 max-w-7xl mx-auto space-y-12 z-10 relative"
+    >
       <div className="text-center space-y-3 max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
           <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -21,7 +31,10 @@ export function PricingSection() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         {/* Full Free Access Card */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-6 flex flex-col justify-between">
+        <motion.div
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-6 flex flex-col justify-between"
+        >
           <div className="space-y-4">
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               Akses Penuh Bebas
@@ -51,10 +64,13 @@ export function PricingSection() {
               Mulai Gunakan Sekarang
             </Button>
           </Link>
-        </div>
+        </motion.div>
 
         {/* Support Development Card */}
-        <div className="bg-gradient-to-b from-amber-950/40 via-orange-950/20 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative">
+        <motion.div
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className="bg-gradient-to-b from-amber-950/40 via-orange-950/20 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative"
+        >
           <div className="absolute -top-3.5 right-8 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-slate-950 shadow-md">
             Dukung Developer ☕
           </div>
@@ -94,8 +110,8 @@ export function PricingSection() {
               </Button>
             </a>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 }

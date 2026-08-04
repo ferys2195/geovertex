@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,13 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
+const NAV_ITEMS = [
+  { id: "sandbox", label: "Interactive Sandbox" },
+  { id: "features", label: "Fitur Unggulan" },
+  { id: "comparison", label: "GeoVertex vs QGIS" },
+  { id: "pricing", label: "Dukungan & Donasi" },
+];
+
 export function HomeHeader() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -24,6 +32,8 @@ export function HomeHeader() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +47,6 @@ export function HomeHeader() {
         return;
       }
 
-      // Check metadata full_name or name
       const metaName =
         currentUser.user_metadata?.full_name || currentUser.user_metadata?.name;
 
@@ -61,12 +70,10 @@ export function HomeHeader() {
       setIsLoading(false);
     };
 
-    // Check initial auth session
     supabase.auth.getSession().then(({ data: { session } }) => {
       loadUserData(session?.user ?? null);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -94,6 +101,66 @@ export function HomeHeader() {
     };
   }, []);
 
+  // Handle scroll detection for dynamic sticky header styling
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  // Handle IntersectionObserver for active section highlighting
+  useEffect(() => {
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observerOptions: IntersectionObserverInit = {
+      rootMargin: "-20% 0px -50% 0px",
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    NAV_ITEMS.forEach((item) => {
+      const el = document.getElementById(item.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    setIsMobileMenuOpen(false);
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 80;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -104,11 +171,17 @@ export function HomeHeader() {
   };
 
   return (
-    <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        isScrolled
+          ? "bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 shadow-xl shadow-slate-950/50"
+          : "bg-slate-950/70 backdrop-blur-md border-b border-slate-800/40"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-600/30 shrink-0">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 group">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-600/30 shrink-0 group-hover:scale-105 transition-transform">
             <Layers className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -120,19 +193,31 @@ export function HomeHeader() {
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-xs lg:text-sm font-medium text-slate-300">
-          <a href="#sandbox" className="hover:text-white transition-colors">
-            Interactive Sandbox
-          </a>
-          <a href="#features" className="hover:text-white transition-colors">
-            Fitur Unggulan
-          </a>
-          <a href="#comparison" className="hover:text-white transition-colors">
-            GeoVertex vs QGIS
-          </a>
-          <a href="#pricing" className="hover:text-white transition-colors">
-            Dukungan & Donasi
-          </a>
+        <nav className="hidden md:flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-medium">
+          {NAV_ITEMS.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                onClick={(e) => handleNavClick(e, item.id)}
+                className={`relative px-3 py-1.5 rounded-lg transition-colors duration-200 ${
+                  isActive
+                    ? "text-white font-semibold"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+                }`}
+              >
+                {item.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeHeaderNav"
+                    className="absolute inset-0 bg-blue-500/15 border border-blue-500/30 rounded-lg -z-10 shadow-sm"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </a>
+            );
+          })}
         </nav>
 
         {/* Desktop & Mobile Actions */}
@@ -239,63 +324,63 @@ export function HomeHeader() {
       </div>
 
       {/* Mobile Navigation Menu Drawer */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-2xl px-5 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-2xl">
-          <nav className="flex flex-col space-y-1 text-xs sm:text-sm font-medium text-slate-300">
-            <a
-              href="#sandbox"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
-            >
-              Interactive Sandbox
-            </a>
-            <a
-              href="#features"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
-            >
-              Fitur Unggulan
-            </a>
-            <a
-              href="#comparison"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
-            >
-              GeoVertex vs QGIS
-            </a>
-            <a
-              href="#pricing"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="hover:text-white hover:bg-slate-900 px-3 py-2 rounded-lg transition-colors"
-            >
-              Dukungan & Donasi
-            </a>
-          </nav>
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="md:hidden overflow-hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-2xl px-5 py-4 space-y-4 shadow-2xl"
+          >
+            <nav className="flex flex-col space-y-1 text-xs sm:text-sm font-medium">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    onClick={(e) => handleNavClick(e, item.id)}
+                    className={`px-3 py-2 rounded-lg transition-colors flex items-center justify-between ${
+                      isActive
+                        ? "bg-blue-600/20 text-white font-semibold border border-blue-500/30"
+                        : "text-slate-300 hover:text-white hover:bg-slate-900"
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    {isActive && (
+                      <span className="w-2 h-2 rounded-full bg-blue-400 shadow-sm shadow-blue-400/50" />
+                    )}
+                  </a>
+                );
+              })}
+            </nav>
 
-          <div className="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
-            {!user ? (
-              <div className="grid grid-cols-2 gap-2">
-                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full h-9 border-slate-800 bg-slate-900 text-slate-200 hover:text-white text-xs rounded-xl">
-                    Masuk
+            <div className="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+              {!user ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full h-9 border-slate-800 bg-slate-900 text-slate-200 hover:text-white text-xs rounded-xl">
+                      Masuk
+                    </Button>
+                  </Link>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full h-9 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-600/20">
+                      Mulai Gratis
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="w-full h-9 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" /> Buka Dashboard
                   </Button>
                 </Link>
-                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button className="w-full h-9 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-600/20">
-                    Mulai Gratis
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button className="w-full h-9 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2">
-                  <LayoutDashboard className="w-4 h-4" /> Buka Dashboard
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
