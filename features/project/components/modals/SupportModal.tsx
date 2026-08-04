@@ -84,28 +84,30 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
           </a>
 
-          <a
-            href={bmacUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-950/20 to-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all duration-200"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 group-hover:scale-105 transition-transform">
-                <Coffee className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-semibold text-sm text-slate-200 flex items-center gap-2">
-                  Buy Me a Coffee
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">
-                    Global / Card
-                  </span>
+          {process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL && (
+            <a
+              href={bmacUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-950/20 to-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all duration-200"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 group-hover:scale-105 transition-transform">
+                  <Coffee className="w-5 h-5" />
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">Dukungan via Credit Card / PayPal</p>
+                <div>
+                  <div className="font-semibold text-sm text-slate-200 flex items-center gap-2">
+                    Buy Me a Coffee
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">
+                      Global / Card
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">Dukungan via Credit Card / PayPal</p>
+                </div>
               </div>
-            </div>
-            <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-yellow-300 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
-          </a>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-yellow-300 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            </a>
+          )}
         </div>
 
         {/* Footer info */}
