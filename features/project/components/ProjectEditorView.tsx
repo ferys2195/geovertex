@@ -7,6 +7,7 @@ import { ExportModal } from "./modals/ExportModal";
 import { ShareModal } from "./modals/ShareModal";
 import { EditAttributesModal } from "./modals/EditAttributesModal";
 import { SupportModal } from "./modals/SupportModal";
+import { ImportGpxModal } from "./modals/ImportGpxModal";
 import { Loader2 } from "lucide-react";
 import { EditorSidebar } from "./EditorSidebar";
 import { GisFeatureProperties, UserRole } from "../types/project.types";
@@ -59,6 +60,8 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
   const setIsExportOpen = useProjectStore((state) => state.setIsExportOpen);
   const isShareOpen = useProjectStore((state) => state.isShareOpen);
   const setIsShareOpen = useProjectStore((state) => state.setIsShareOpen);
+  const isImportGpxOpen = useProjectStore((state) => state.isImportGpxOpen);
+  const setIsImportGpxOpen = useProjectStore((state) => state.setIsImportGpxOpen);
   const selectedPdfFeatureId = useProjectStore((state) => state.selectedPdfFeatureId);
   const setSelectedPdfFeatureId = useProjectStore((state) => state.setSelectedPdfFeatureId);
   const deleteMapFeature = useProjectStore((state) => state.deleteMapFeature);
@@ -241,7 +244,7 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
                   duration: 0.3,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                className="absolute left-0 top-0 bottom-0 z-40 h-full w-80 shrink-0 shadow-2xl bg-slate-900 border-r border-slate-800 pointer-events-auto"
+                className="absolute left-0 top-0 bottom-0 z-40 h-full w-96 shrink-0 shadow-2xl bg-slate-900 border-r border-slate-800 pointer-events-auto"
               >
                 <EditorSidebar
                   geoJsonData={geoJsonData}
@@ -321,6 +324,11 @@ export function ProjectEditorView({ projectId }: ProjectEditorViewProps) {
       <SupportModal
         isOpen={isSupportOpen}
         onClose={() => setIsSupportOpen(false)}
+      />
+
+      <ImportGpxModal
+        isOpen={isImportGpxOpen}
+        onClose={() => setIsImportGpxOpen(false)}
       />
     </div>
   );

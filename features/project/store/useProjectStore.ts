@@ -7,8 +7,9 @@ import type {
   CoordinateMode,
   CloudSaveStatus,
 } from "../types/project.types";
+import { saveTempGpxToStorage, clearTempGpxFromStorage } from "../utils/gpxLocalStorage";
 
-export type SidebarTab = "layers" | "attribute" | "team" | "utm";
+export type SidebarTab = "layers" | "drafts" | "settings";
 
 export interface ProjectState {
   // Project & User Info
@@ -37,6 +38,7 @@ export interface ProjectState {
   // Modal States
   isExportOpen: boolean;
   isShareOpen: boolean;
+  isImportGpxOpen: boolean;
   selectedPdfFeatureId: string | null;
 
   // Actions
@@ -53,6 +55,14 @@ export interface ProjectState {
     updated: Partial<MapFeatureExportData>
   ) => void;
   deleteMapFeature: (id: string) => void;
+
+  // Temp GPX Features Actions
+  addTempGpxFeatures: (newFeatures: MapFeatureExportData[]) => void;
+  promoteTempFeature: (id: string) => void;
+  promoteAllTempFeatures: () => void;
+  removeTempFeature: (id: string) => void;
+  clearAllTempFeatures: () => void;
+
   setSelectedFeatureId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setSaveStatus: (status: CloudSaveStatus) => void;
@@ -66,6 +76,7 @@ export interface ProjectState {
   setZoomToTrigger: (trigger: { id: string; time: number } | null) => void;
   setIsExportOpen: (open: boolean) => void;
   setIsShareOpen: (open: boolean) => void;
+  setIsImportGpxOpen: (open: boolean) => void;
   setSelectedPdfFeatureId: (id: string | null) => void;
   clearDeletedFeatureIds: () => void;
   resetStore: () => void;
@@ -89,10 +100,11 @@ const initialStoreState = {
   zoomToTrigger: null,
   isExportOpen: false,
   isShareOpen: false,
+  isImportGpxOpen: false,
   selectedPdfFeatureId: null,
 };
 
-export const useProjectStore = create<ProjectState>((set) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
   ...initialStoreState,
 
   setProjectId: (id) => set({ projectId: id }),
@@ -104,29 +116,175 @@ export const useProjectStore = create<ProjectState>((set) => ({
     set({ mapFeatures: features }),
 
   addMapFeature: (feature) =>
-    set((state) => ({
-      mapFeatures: [...state.mapFeatures, feature],
-      saveStatus: "unsaved",
-      isDirty: true,
-    })),
+    set((state) => {
+      const nextFeatures = [...state.mapFeatures, feature];
+      if (feature.isTemporary) {
+        saveTempGpxToStorage(state.projectId, nextFeatures);
+        return { mapFeatures: nextFeatures };
+      }
+      return {
+        mapFeatures: nextFeatures,
+        saveStatus: "unsaved",
+        isDirty: true,
+      };
+    }),
 
   updateMapFeature: (id, updated) =>
-    set((state) => ({
-      mapFeatures: state.mapFeatures.map((f) =>
+    set((state) => {
+      const nextFeatures = state.mapFeatures.map((f) =>
         f.id === id ? { ...f, ...updated } : f
-      ),
-      saveStatus: "unsaved",
-      isDirty: true,
-    })),
+      );
+      const isTargetTemp = state.mapFeatures.find((f) => f.id === id)?.isTemporary;
+      if (isTargetTemp) {
+        saveTempGpxToStorage(state.projectId, nextFeatures);
+        return { mapFeatures: nextFeatures };
+      }
+      return {
+        mapFeatures: nextFeatures,
+        saveStatus: "unsaved",
+        isDirty: true,
+      };
+    }),
 
   deleteMapFeature: (id) =>
-    set((state) => ({
-      mapFeatures: state.mapFeatures.filter((f) => f.id !== id),
-      deletedFeatureIds: [...state.deletedFeatureIds, id],
-      selectedFeatureId: state.selectedFeatureId === id ? null : state.selectedFeatureId,
-      saveStatus: "unsaved",
-      isDirty: true,
-    })),
+    set((state) => {
+      const target = state.mapFeatures.find((f) => f.id === id);
+      const nextFeatures = state.mapFeatures.filter((f) => f.id !== id);
+
+      if (target?.isTemporary) {
+        saveTempGpxToStorage(state.projectId, nextFeatures);
+        return {
+          mapFeatures: nextFeatures,
+          selectedFeatureId: state.selectedFeatureId === id ? null : state.selectedFeatureId,
+        };
+      }
+
+      return {
+        mapFeatures: nextFeatures,
+        deletedFeatureIds: [...state.deletedFeatureIds, id],
+        selectedFeatureId: state.selectedFeatureId === id ? null : state.selectedFeatureId,
+        saveStatus: "unsaved",
+        isDirty: true,
+      };
+    }),
+
+  addTempGpxFeatures: (newFeatures) =>
+    set((state) => {
+      const featMap = new Map<string, MapFeatureExportData>();
+      state.mapFeatures.forEach((f) => featMap.set(f.id, f));
+
+      newFeatures.forEach((f, idx) => {
+        const isDuplicateId = featMap.has(f.id);
+        const uniqueId = !f.id || isDuplicateId
+          ? `temp-gpx-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 9)}`
+          : f.id;
+        const formatted: MapFeatureExportData = {
+          ...f,
+          id: uniqueId,
+          isTemporary: true,
+          properties: {
+            ...f.properties,
+            id: uniqueId,
+            isTemporary: true,
+          },
+        };
+        featMap.set(uniqueId, formatted);
+      });
+
+      const nextFeatures = Array.from(featMap.values());
+      saveTempGpxToStorage(state.projectId, nextFeatures);
+      return { mapFeatures: nextFeatures };
+    }),
+
+  promoteTempFeature: (id) =>
+    set((state) => {
+      const isUuid = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const permanentId = isUuid
+        ? id
+        : typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `f-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      const nextFeatures = state.mapFeatures.map((f) => {
+        if (f.id !== id) return f;
+        const newColor = f.color === "#ef4444" || !f.color ? "#2563EB" : f.color;
+        return {
+          ...f,
+          id: permanentId,
+          color: newColor,
+          isTemporary: false,
+          properties: {
+            ...f.properties,
+            id: permanentId,
+            color: newColor,
+            isTemporary: false,
+          },
+        };
+      });
+
+      saveTempGpxToStorage(state.projectId, nextFeatures);
+      return {
+        mapFeatures: nextFeatures,
+        selectedFeatureId: state.selectedFeatureId === id ? permanentId : state.selectedFeatureId,
+        saveStatus: "unsaved",
+        isDirty: true,
+      };
+    }),
+
+  promoteAllTempFeatures: () =>
+    set((state) => {
+      const nextFeatures = state.mapFeatures.map((f) => {
+        if (!f.isTemporary) return f;
+        const isUuid = f.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(f.id);
+        const permanentId = isUuid
+          ? f.id
+          : typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `f-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const newColor = f.color === "#ef4444" || !f.color ? "#2563EB" : f.color;
+        return {
+          ...f,
+          id: permanentId,
+          color: newColor,
+          isTemporary: false,
+          properties: {
+            ...f.properties,
+            id: permanentId,
+            color: newColor,
+            isTemporary: false,
+          },
+        };
+      });
+
+      clearTempGpxFromStorage(state.projectId);
+      return {
+        mapFeatures: nextFeatures,
+        saveStatus: "unsaved",
+        isDirty: true,
+      };
+    }),
+
+  removeTempFeature: (id) =>
+    set((state) => {
+      const nextFeatures = state.mapFeatures.filter((f) => f.id !== id);
+      saveTempGpxToStorage(state.projectId, nextFeatures);
+      return {
+        mapFeatures: nextFeatures,
+        selectedFeatureId: state.selectedFeatureId === id ? null : state.selectedFeatureId,
+      };
+    }),
+
+  clearAllTempFeatures: () =>
+    set((state) => {
+      const nextFeatures = state.mapFeatures.filter((f) => !f.isTemporary);
+      clearTempGpxFromStorage(state.projectId);
+      return {
+        mapFeatures: nextFeatures,
+        selectedFeatureId: state.mapFeatures.find((f) => f.id === state.selectedFeatureId)?.isTemporary
+          ? null
+          : state.selectedFeatureId,
+      };
+    }),
 
   setSelectedFeatureId: (id) => set({ selectedFeatureId: id }),
 
@@ -159,9 +317,12 @@ export const useProjectStore = create<ProjectState>((set) => ({
 
   setIsShareOpen: (isShareOpen) => set({ isShareOpen }),
 
+  setIsImportGpxOpen: (isImportGpxOpen) => set({ isImportGpxOpen }),
+
   setSelectedPdfFeatureId: (selectedPdfFeatureId) => set({ selectedPdfFeatureId }),
 
   clearDeletedFeatureIds: () => set({ deletedFeatureIds: [] }),
 
   resetStore: () => set({ ...initialStoreState }),
 }));
+

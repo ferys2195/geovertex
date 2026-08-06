@@ -29,16 +29,19 @@ export function useAutoSave() {
         setSaveStatus("saving");
         const supabase = createClient();
 
-        // 1. Delete removed features
-        const uniqueIdsToDelete = [...new Set(idsToDelete)];
-        if (uniqueIdsToDelete.length > 0) {
-          await supabase.from("map_features").delete().in("id", uniqueIdsToDelete);
+        // Filter out temporary features from DB save payload
+        const permanentFeaturesToSave = featuresToSave.filter((f) => !f.isTemporary);
+        const permanentIdsToDelete = [...new Set(idsToDelete)].filter((id) => !id.startsWith("temp-"));
+
+        // 1. Delete removed features from DB
+        if (permanentIdsToDelete.length > 0) {
+          await supabase.from("map_features").delete().in("id", permanentIdsToDelete);
           clearDeletedFeatureIds();
         }
 
-        // 2. Upsert existing features
-        if (featuresToSave.length > 0) {
-          const payload = featuresToSave.map((f) => {
+        // 2. Upsert existing permanent features to DB
+        if (permanentFeaturesToSave.length > 0) {
+          const payload = permanentFeaturesToSave.map((f) => {
             let geometryObj: unknown;
             if (f.type === "Polygon" || f.type === "Rectangle") {
               const coords = f.latLngs.map(([lat, lng]) => [lng, lat]);
@@ -104,9 +107,13 @@ export function useAutoSave() {
                 const returnedItem = upsertedData[idx];
                 if (
                   returnedItem?.id &&
-                  (!f.id || f.id.startsWith("f-") || f.id.startsWith("pt-"))
+                  (!f.id || f.id.startsWith("f-") || f.id.startsWith("pt-") || f.id.startsWith("temp-"))
                 ) {
-                  return { ...f, id: returnedItem.id };
+                  return {
+                    ...f,
+                    id: returnedItem.id,
+                    properties: { ...f.properties, id: returnedItem.id },
+                  };
                 }
                 return f;
               })
