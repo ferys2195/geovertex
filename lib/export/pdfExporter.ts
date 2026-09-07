@@ -29,6 +29,8 @@ export interface MapFeatureExportData {
   areaSqm?: number;
   perimeterMeters?: number;
   color?: string;
+  isTemporary?: boolean;
+  sourceFormat?: "gpx" | "geojson" | "manual";
 }
 
 const calculateNiceGridStep = (range: number, targetTicks = 5): number => {

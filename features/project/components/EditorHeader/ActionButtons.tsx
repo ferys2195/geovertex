@@ -1,6 +1,7 @@
 import React from "react";
-import { Share2, Download, Coffee } from "lucide-react";
+import { Share2, Download, Coffee, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProjectStore } from "../../store/useProjectStore";
 
 interface ActionButtonsProps {
   onOpenShareModal: () => void;
@@ -9,8 +10,22 @@ interface ActionButtonsProps {
 }
 
 export function ActionButtons({ onOpenShareModal, onOpenExportModal, onOpenSupportModal }: ActionButtonsProps) {
+  const setIsImportGpxOpen = useProjectStore((state) => state.setIsImportGpxOpen);
+
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setIsImportGpxOpen(true)}
+        title="Buka / Import File GPX"
+        className="border-emerald-600/40 bg-slate-800 hover:bg-slate-700 text-emerald-300 hover:text-emerald-200 text-[11px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 shrink-0"
+      >
+        <FileCode className="w-3.5 h-3.5 sm:mr-1.5 text-emerald-400" />
+        <span className="hidden sm:inline">Import GPX</span>
+        <span className="hidden xs:inline sm:hidden">GPX</span>
+      </Button>
+
       <Button
         size="sm"
         variant="outline"

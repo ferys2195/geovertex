@@ -37,6 +37,8 @@ export function useGeoJsonSync() {
           name: f.name,
           description: f.properties?.description || "",
           color: f.color || "#2563EB",
+          isTemporary: f.isTemporary ?? false,
+          sourceFormat: f.sourceFormat,
           ...f.properties,
         },
       };
@@ -44,7 +46,6 @@ export function useGeoJsonSync() {
   }), [mapFeatures]);
 
   const handleUpdateGeoJSON = (data: FeatureCollection) => {
-    markDirty();
     const converted: MapFeatureExportData[] = data.features
       .filter((feat) => feat && feat.geometry)
       .map((feat, idx) => {
@@ -80,6 +81,8 @@ export function useGeoJsonSync() {
           perimeterMeters = calculateLineLength(finalLatLngs);
         }
 
+        const isTemp = (props as any).isTemporary ?? existing?.isTemporary ?? false;
+
         return {
           id: assignedId,
           type: type === "Polygon" ? "Polygon" : type === "LineString" ? "Polyline" : "Marker",
@@ -88,15 +91,23 @@ export function useGeoJsonSync() {
           areaSqm: areaSqm ?? existing?.areaSqm,
           perimeterMeters: perimeterMeters ?? existing?.perimeterMeters,
           color: props.color || existing?.color || "#2563EB",
+          isTemporary: isTemp,
+          sourceFormat: existing?.sourceFormat || (props as any).sourceFormat,
           properties: {
             ...existing?.properties,
             ...props,
+            isTemporary: isTemp,
             areaSqm: areaSqm ?? existing?.areaSqm ?? null,
             perimeterMeters: perimeterMeters ?? existing?.perimeterMeters ?? null,
             latLngs: finalLatLngs.map(([lat, lng]) => ({ lat, lng })),
           },
         };
       });
+
+    // Only mark dirty if permanent features are updated
+    if (converted.some((f) => !f.isTemporary)) {
+      markDirty();
+    }
 
     setMapFeatures(converted);
   };

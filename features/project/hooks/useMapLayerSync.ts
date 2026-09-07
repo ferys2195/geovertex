@@ -7,6 +7,7 @@ import { CoordinateMode } from '@/lib/types';
 import { getFlatLatLngs, createCustomPinIcon } from '../utils/leafletHelpers';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { FeatureActionButtons } from '../components/FeatureActionButtons';
+import { useProjectStore } from '../store/useProjectStore';
 
 interface UseMapLayerSyncOptions {
   mapInstanceRef: React.RefObject<L.Map | null>;
@@ -50,6 +51,7 @@ export function useMapLayerSync({
   const mapGeoJsonStrRef = useRef<string>('');
   const isInternalUserActionRef = useRef<boolean>(false);
   const syncMapToStateRef = useRef<() => void>(() => {});
+  const isInitialFitDoneRef = useRef<boolean>(false);
 
   const syncMapToState = () => {
     if (!geojsonGroupRef.current) return;
@@ -180,12 +182,18 @@ export function useMapLayerSync({
         `;
       }
 
+      const isTemp = props.isTemporary || layer.feature?.properties?.isTemporary || layer._pm_temp_id?.startsWith('temp-');
+      const badgeText = isTemp ? 'LOCAL TEMP' : geomTypeBadge;
+      const badgeStyle = isTemp
+        ? 'bg-amber-100 text-amber-800 border-amber-300 font-mono'
+        : 'bg-emerald-100 text-emerald-700 border-emerald-300';
+
       const tooltipHtml = `
         <div class="p-2.5 text-xs font-sans min-w-52.5 space-y-2">
           <div class="flex items-center justify-between border-b border-zinc-200 pb-1.5 gap-2">
             <p class="font-bold text-zinc-900 text-sm truncate max-w-32.5 m-0">${name}</p>
-            <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-300 shrink-0">
-              ${geomTypeBadge}
+            <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${badgeStyle} border shrink-0">
+              ${badgeText}
             </span>
           </div>
           ${desc ? `<p class="text-[11px] text-zinc-500 italic line-clamp-2 m-0">${desc}</p>` : ''}
@@ -208,11 +216,23 @@ export function useMapLayerSync({
       }
     };
 
+    let activeRoot: Root | null = null;
     updatePopupContent();
 
-    let activeRoot: Root | null = null;
+    const safeUnmountRoot = () => {
+      if (activeRoot) {
+        const rootToUnmount = activeRoot;
+        activeRoot = null;
+        setTimeout(() => {
+          try {
+            rootToUnmount.unmount();
+          } catch {}
+        }, 0);
+      }
+    };
 
     layer.on('popupopen', () => {
+      safeUnmountRoot();
       const featureId = layer._pm_temp_id;
       setTimeout(() => {
         const container = document.getElementById(`popup-actions-${featureId}`);
@@ -226,6 +246,7 @@ export function useMapLayerSync({
             }
           }
           const geom = currentGeo?.geometry || layer.feature?.geometry;
+          const isTemp = props.isTemporary || layer.feature?.properties?.isTemporary || layer._pm_temp_id?.startsWith('temp-');
 
           activeRoot = createRoot(container);
           activeRoot.render(
@@ -236,6 +257,11 @@ export function useMapLayerSync({
                 featureId,
                 geom,
                 coordinateMode,
+                isTemporary: isTemp,
+                onPromoteTempFeature: (id: string) => {
+                  layer.closePopup();
+                  useProjectStore.getState().promoteTempFeature(id);
+                },
                 onSelectPdfFeature: (id: string | null) => onSelectPdfFeature(id),
                 onOpenExportModal,
                 showZoom: false,
@@ -258,14 +284,8 @@ export function useMapLayerSync({
       }, 50);
     });
 
-    layer.on('popupclose', () => {
-      if (activeRoot) {
-        try {
-          activeRoot.unmount();
-        } catch {}
-        activeRoot = null;
-      }
-    });
+    layer.on('popupclose', safeUnmountRoot);
+    layer.on('remove', safeUnmountRoot);
 
     layer.on('click', (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
@@ -303,14 +323,17 @@ export function useMapLayerSync({
     if (!isMapReady || !map || !group) return;
 
     const currentExternalStr = JSON.stringify(geoJsonData);
+    const currentLayerCount = group.getLayers().length;
+    const targetFeatureCount = geoJsonData?.features?.length ?? 0;
 
-    if (isInternalUserActionRef.current) {
+    if (isInternalUserActionRef.current && currentLayerCount === targetFeatureCount) {
       isInternalUserActionRef.current = false;
       mapGeoJsonStrRef.current = currentExternalStr;
       return;
     }
+    isInternalUserActionRef.current = false;
 
-    if (currentExternalStr === mapGeoJsonStrRef.current) {
+    if (currentExternalStr === mapGeoJsonStrRef.current && currentLayerCount === targetFeatureCount) {
       return;
     }
 
@@ -361,12 +384,13 @@ export function useMapLayerSync({
 
         map.invalidateSize();
 
-        if (group.getLayers().length > 0) {
+        if (!isInitialFitDoneRef.current && group.getLayers().length > 0) {
           try {
             const bounds = group.getBounds();
             if (bounds && bounds.isValid()) {
               map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
-              console.log(`🔍 [MapContainer] fitBounds applied:`, bounds.toBBoxString());
+              isInitialFitDoneRef.current = true;
+              console.log(`🔍 [MapContainer Initial] fitBounds applied:`, bounds.toBBoxString());
             } else {
               console.warn('⚠️ [MapContainer] bounds tidak valid, tidak bisa fitBounds');
             }

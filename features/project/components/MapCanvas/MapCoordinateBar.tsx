@@ -23,8 +23,8 @@ export function MapCoordinateBar({
 
   return (
     <div
-      className="absolute bottom-4 z-1000 bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
-      style={{ left: isSidebarOpen ? '336px' : '16px' }}
+      className="absolute bottom-4 z-15 bg-white/95 backdrop-blur-xs text-slate-900 py-1.5 px-3.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2 font-mono text-[11px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      style={{ left: isSidebarOpen ? '400px' : '16px' }}
     >
       <Crosshair className="w-3.5 h-3.5 text-blue-600 animate-pulse shrink-0" />
       <span className="text-slate-500 border-r border-slate-200 pr-2 font-bold uppercase tracking-wider text-[9px] shrink-0">Kursor:</span>

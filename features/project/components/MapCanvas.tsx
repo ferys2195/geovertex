@@ -117,15 +117,13 @@ export function MapCanvas({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Shift Geoman controls (.leaflet-top.leaflet-left)
-    const leftControls = mapContainerRef.current.querySelector(
-      '.leaflet-top.leaflet-left'
-    ) as HTMLElement | null;
-
-    if (leftControls) {
-      leftControls.style.transition = 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-      leftControls.style.left = isSidebarOpen ? '332px' : '10px';
-    }
+    // Shift Geoman controls & Leaflet left controls (.leaflet-left)
+    const leftControls = mapContainerRef.current.querySelectorAll('.leaflet-left');
+    leftControls.forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.style.transition = 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+      htmlEl.style.left = isSidebarOpen ? '400px' : '16px';
+    });
 
     const map = mapInstanceRef.current;
     if (!map) return;

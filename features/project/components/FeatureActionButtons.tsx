@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Copy, Check, Eye, Edit3, Trash2 } from 'lucide-react';
+import { FileText, Copy, Check, Eye, Edit3, Trash2, Save } from 'lucide-react';
 import { Geometry } from 'geojson';
 import { CoordinateMode } from '@/lib/types';
 import { latLngToUtm } from '@/lib/gis';
@@ -10,6 +10,8 @@ export interface FeatureActionButtonsProps {
   featureId: string;
   geom?: Geometry | null;
   coordinateMode: CoordinateMode;
+  isTemporary?: boolean;
+  onPromoteTempFeature?: (featureId: string) => void;
   onSelectPdfFeature?: (id: string | null) => void;
   onOpenExportModal?: () => void;
   onZoomToFeature?: (featureId: string) => void;
@@ -24,6 +26,8 @@ export function FeatureActionButtons({
   featureId,
   geom,
   coordinateMode,
+  isTemporary = false,
+  onPromoteTempFeature,
   onSelectPdfFeature,
   onOpenExportModal,
   onZoomToFeature,
@@ -74,6 +78,52 @@ export function FeatureActionButtons({
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  if (isTemporary) {
+    return (
+      <div className={className}>
+        <Tooltip>
+          <TooltipTrigger render={
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={isReadOnly}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isReadOnly) onPromoteTempFeature?.(featureId);
+              }}
+              className="w-7 h-7 hover:border-emerald-500 hover:text-emerald-500 border-emerald-500/40 text-emerald-600 bg-emerald-50/50"
+            >
+              <Save className="w-3.5 h-3.5" />
+            </Button>
+          } />
+          <TooltipContent>Simpan ke Database Supabase Permanen</TooltipContent>
+        </Tooltip>
+
+        {onDeleteFeature && (
+          <Tooltip>
+            <TooltipTrigger render={
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={isReadOnly}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isReadOnly) onDeleteFeature(featureId);
+                }}
+                className="w-7 h-7 text-destructive hover:text-destructive/85 disabled:opacity-40"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            } />
+            <TooltipContent>
+              {isReadOnly ? "Role Viewer tidak dapat menghapus layer temporer" : "Hapus Layer Temporer"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={className}>

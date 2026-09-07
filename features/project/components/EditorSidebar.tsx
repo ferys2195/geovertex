@@ -13,6 +13,10 @@ import { SidebarFilterTabs, FeatureFilterType } from "./Sidebar/SidebarFilterTab
 import { SidebarEmptyState } from "./Sidebar/SidebarEmptyState";
 import { SidebarFeatureItem } from "./Sidebar/SidebarFeatureItem";
 import { SidebarFooter } from "./Sidebar/SidebarFooter";
+import { SidebarNavRail } from "./Sidebar/SidebarNavRail";
+import { DraftsPanel } from "./Sidebar/DraftsPanel";
+import { SettingsPanel } from "./Sidebar/SettingsPanel";
+import { useProjectStore } from "../store/useProjectStore";
 
 export function EditorSidebar({
   geoJsonData,
@@ -28,6 +32,16 @@ export function EditorSidebar({
 }: EditorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<FeatureFilterType>("ALL");
+
+  const activeTab = useProjectStore((state) => state.activeTab);
+  const setActiveTab = useProjectStore((state) => state.setActiveTab);
+  const toggleSidebar = useProjectStore((state) => state.toggleSidebar);
+
+  const mapFeatures = useProjectStore((state) => state.mapFeatures);
+  const tempFeatures = useMemo(
+    () => mapFeatures.filter((f) => f.isTemporary),
+    [mapFeatures]
+  );
 
   const {
     editingId,
@@ -47,9 +61,14 @@ export function EditorSidebar({
     handleApplyTemplate,
   } = useFeatureEdit({ geoJsonData, onUpdateFeatureProperties });
 
-  // Filter features based on tab filter and search query
+  // Filter features based on tab filter and search query (excluding temporary features from main DB list)
+  const dbFeaturesCount = useMemo(
+    () => geoJsonData.features.filter((f) => !(f.properties as any)?.isTemporary).length,
+    [geoJsonData.features]
+  );
+
   const filteredFeatures = useMemo(() => {
-    let list = geoJsonData.features;
+    let list = geoJsonData.features.filter((f) => !(f.properties as any)?.isTemporary);
 
     // 1. Filter by geometry type tab
     if (activeFilter !== "ALL") {
@@ -87,72 +106,99 @@ export function EditorSidebar({
   }, [geoJsonData.features, activeFilter, searchQuery]);
 
   return (
-    <aside className="w-80 bg-slate-900 border-r border-slate-800 text-foreground flex flex-col h-full shrink-0 z-20 shadow-xl">
-      <SidebarHeader filteredCount={filteredFeatures.length} totalCount={geoJsonData.features.length} />
-
-      <SidebarSearch
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onClearSearch={() => setSearchQuery("")}
+    <aside className="w-96 h-full bg-slate-900 border-r border-slate-800 text-foreground flex flex-row shrink-0 z-20 shadow-xl overflow-hidden">
+      {/* 1. Left Vertical Icon Navigation Rail */}
+      <SidebarNavRail
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tempCount={tempFeatures.length}
+        layersCount={dbFeaturesCount}
+        onToggleSidebar={toggleSidebar}
       />
 
-      <SidebarFilterTabs
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        features={geoJsonData.features}
-      />
+      {/* 2. Dynamic Content Panel (Daftar Bidang / Drafts / Settings) */}
+      <div className="flex-1 flex flex-col h-full bg-slate-900 overflow-hidden">
+        {activeTab === "layers" && (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <SidebarHeader filteredCount={filteredFeatures.length} totalCount={dbFeaturesCount} />
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        <div className="space-y-2">
-          {geoJsonData.features.length === 0 || filteredFeatures.length === 0 ? (
-            <SidebarEmptyState
-              totalFeaturesCount={geoJsonData.features.length}
+            <SidebarSearch
               searchQuery={searchQuery}
-              onResetSearch={() => {
-                setSearchQuery("");
-                setActiveFilter("ALL");
-              }}
+              onSearchQueryChange={setSearchQuery}
+              onClearSearch={() => setSearchQuery("")}
             />
-          ) : (
-            <div className="space-y-2.5">
-              <AnimatePresence initial={false}>
-                {filteredFeatures.map((feature, idx) => (
-                  <SidebarFeatureItem
-                    key={(feature.properties as any)?.id || `f-${idx}`}
-                    feature={feature}
-                    idx={idx}
-                    editingId={editingId}
-                    coordinateMode={coordinateMode}
-                    selectedPdfFeatureId={selectedPdfFeatureId}
-                    onZoomToFeature={onZoomToFeature}
-                    onDeleteFeature={onDeleteFeature}
-                    onSelectPdfFeature={onSelectPdfFeature}
-                    onOpenExportModal={onOpenExportModal}
-                    onEditFeature={onEditFeature}
-                    isReadOnly={isReadOnly}
-                    editName={editName}
-                    setEditName={setEditName}
-                    editDesc={editDesc}
-                    setEditDesc={setEditDesc}
-                    editColor={editColor}
-                    setEditColor={setEditColor}
-                    editCustomProps={editCustomProps}
-                    onSaveFeature={handleSaveFeature}
-                    onCancelEdit={cancelEditing}
-                    onAddCustomProp={handleAddCustomProp}
-                    onRemoveCustomProp={handleRemoveCustomProp}
-                    onCustomPropChange={handleCustomPropChange}
-                    onRenameCustomPropKey={handleRenameCustomPropKey}
-                    onApplyTemplate={handleApplyTemplate}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      </div>
 
-      <SidebarFooter />
+            <SidebarFilterTabs
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              features={geoJsonData.features.filter((f) => !(f.properties as any)?.isTemporary)}
+            />
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div className="space-y-2">
+                {dbFeaturesCount === 0 || filteredFeatures.length === 0 ? (
+                  <SidebarEmptyState
+                    totalFeaturesCount={dbFeaturesCount}
+                    searchQuery={searchQuery}
+                    onResetSearch={() => {
+                      setSearchQuery("");
+                      setActiveFilter("ALL");
+                    }}
+                  />
+                ) : (
+                  <div className="space-y-2.5">
+                    <AnimatePresence initial={false}>
+                      {filteredFeatures.map((feature, idx) => (
+                        <SidebarFeatureItem
+                          key={(feature.properties as any)?.id || `f-${idx}`}
+                          feature={feature}
+                          idx={idx}
+                          editingId={editingId}
+                          coordinateMode={coordinateMode}
+                          selectedPdfFeatureId={selectedPdfFeatureId}
+                          onZoomToFeature={onZoomToFeature}
+                          onDeleteFeature={onDeleteFeature}
+                          onSelectPdfFeature={onSelectPdfFeature}
+                          onOpenExportModal={onOpenExportModal}
+                          onEditFeature={onEditFeature}
+                          isReadOnly={isReadOnly}
+                          editName={editName}
+                          setEditName={setEditName}
+                          editDesc={editDesc}
+                          setEditDesc={setEditDesc}
+                          editColor={editColor}
+                          setEditColor={setEditColor}
+                          editCustomProps={editCustomProps}
+                          onSaveFeature={handleSaveFeature}
+                          onCancelEdit={cancelEditing}
+                          onAddCustomProp={handleAddCustomProp}
+                          onRemoveCustomProp={handleRemoveCustomProp}
+                          onCustomPropChange={handleCustomPropChange}
+                          onRenameCustomPropKey={handleRenameCustomPropKey}
+                          onApplyTemplate={handleApplyTemplate}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <SidebarFooter />
+          </div>
+        )}
+
+        {activeTab === "drafts" && (
+          <DraftsPanel
+            tempFeatures={tempFeatures}
+            onZoomToFeature={onZoomToFeature}
+          />
+        )}
+
+        {activeTab === "settings" && (
+          <SettingsPanel coordinateMode={coordinateMode} />
+        )}
+      </div>
     </aside>
   );
 }

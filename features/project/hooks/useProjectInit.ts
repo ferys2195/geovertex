@@ -6,6 +6,7 @@ import { isDevModeAllowed } from "@/lib/utils";
 import { useProjectStore } from "../store/useProjectStore";
 import type { MapFeatureExportData, TeamMemberItem } from "../types/project.types";
 import { calculatePolygonArea, calculatePolygonPerimeter, calculateLineLength } from "@/lib/gis";
+import { loadTempGpxFromStorage } from "../utils/gpxLocalStorage";
 
 export function useProjectInit(projectId: string) {
   const router = useRouter();
@@ -233,7 +234,18 @@ export function useProjectInit(projectId: string) {
           })
           .filter((f) => Array.isArray(f.latLngs) && f.latLngs.length > 0);
 
-        setMapFeatures(mappedFeats);
+        const tempGpxFeats = loadTempGpxFromStorage(projectId);
+        const featMap = new Map<string, MapFeatureExportData>();
+        mappedFeats.forEach((f) => featMap.set(f.id, f));
+        tempGpxFeats.forEach((f) => featMap.set(f.id, f));
+        setMapFeatures(Array.from(featMap.values()));
+      } else {
+        const tempGpxFeats = loadTempGpxFromStorage(projectId);
+        if (tempGpxFeats.length > 0) {
+          const featMap = new Map<string, MapFeatureExportData>();
+          tempGpxFeats.forEach((f) => featMap.set(f.id, f));
+          setMapFeatures(Array.from(featMap.values()));
+        }
       }
     } catch (err) {
       console.error("Error loading project:", err);
